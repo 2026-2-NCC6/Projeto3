@@ -29,6 +29,8 @@ Projeto desenvolvido para otimizar o acompanhamento e a evolução de praticante
  │   ├── 📄 Banner_FECAP_CCOMP6_D2LV.pdf<br>
  │   ├── 📄 Banner_FECAP_CCOMP6_D2LV.pptx<br>
  │   └── 📄 Documento - Projeto de Extensão - COM Empresa<br>
+ ├── 🗂️ Imagens/<br>
+ ├── 🗂️ SRC/<br>
  ├── 📄 .gitignore<br>
  └── 📄 readme.md<br>
  
