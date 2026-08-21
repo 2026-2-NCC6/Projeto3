@@ -6,12 +6,10 @@ Projeto 3
 </p>
 
 # 👨‍💻 Integrantes:  <a href="https://github.com/danmoribe">Daniel Kyoshi Moribe,</a> <a href="https://github.com/Leonardoss23">Leonardo Santos da Silva,</a> <a href="https://github.com/oGubo">Lucas de Lima Gutierrez e <a href="https://github.com/vitorzoken">Vitor Kenzo Kanashiro
-# 👨‍🏫 Professores Orientadores: <a href="https://br.linkedin.com/in/marcosminorunakatsugawa/pt">Prof. Marcos Minoru Nakatsugawa,</a> <a href="https://br.linkedin.com/in/rafael-diogo-rossetti"> Rafael Diogo Rossetti,</a> <a href="https://github.com/roddai">Prof. Rodrigo da Rosa,<a/> <a href="https://www.researchgate.net/profile/Rodnil-Lisboa-2">Prof. Rodnil da Silva Moreira Lisboa e </a> <a href="https://github.com/VictorRosetti">Prof. Victor Rosseti</a>
+# 👨‍🏫 Professores Orientadores: <a href="https://br.linkedin.com/in/edsonbarbero">Prof. Edson Ricardo Barbero,</a> <a href="https://www.linkedin.com/in/katia-bossi/">Prof. Katia Milani Lara Bossi,</a> <a href="https://www.linkedin.com/in/trencher/">Prof. João Francisco Trencher Martins,<a/> <a href="https://www.researchgate.net/profile/Rodnil-Lisboa-2">Prof. Rodnil da Silva Moreira Lisboa e </a> <a href="https://github.com/VictorRosetti">Prof. Victor Rosseti</a>
 
 # 📄 Descrição
-O Lideranças Empáticas (LE) é um projeto que une impacto social e educação empreendedora por meio da arrecadação de alimentos, permitindo o desenvolvimento de habilidades como liderança, gestão e organização.
-Para otimizar esse processo, estamos desenvolvendo o Scanner AI, uma solução baseada em Visão Computacional e Inteligência Artificial capaz de identificar, classificar e contar automaticamente os alimentos arrecadados. O sistema registra os dados por equipe, categoria e tempo, garantindo maior precisão e confiabilidade.
-Além disso, o projeto inclui um dashboard interativo, que permite acompanhar os resultados em tempo real, comparar o desempenho entre equipes e gerar relatórios, tornando a arrecadação mais eficiente e transparente.
+Projeto desenvolvido para otimizar o acompanhamento e a evolução de praticantes de tênis durante sessões de treino. Atualmente, a medição de métricas do treino individual, como consistência, velocidade, precisão de impacto e tipos de golpe, depende da observação visual ou de registros manuais, o que limita o retorno em tempo real e exige esforço contínuo da comissão técnica. Nosso objetivo é automatizar a coleta e a análise de desempenho utilizando uma raquete instrumentada com sensores IoT integrada a um alvo de contato e a uma plataforma mobile e web. O sistema calcula a pontuação parametrizada pelo nível do atleta e fornece feedback visual e sonoro imediato, permitindo que atletas e treinadores concentrem seus esforços no ajuste tático e na evolução técnica, aumentando a eficiência das sessões e otimizando o desenvolvimento esportivo.
 
 # 📋 Detalhes
  🗂️ Estrutura de pastas<br>
