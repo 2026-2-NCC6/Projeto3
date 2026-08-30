@@ -1,0 +1,31 @@
+{
+  "expo": {
+    "name": "Tennis Analytics",
+    "icon": "./assets/imagemlogosecundaria.png",
+    "slug": "smart-tennis-arena",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "splash": {
+      "backgroundColor": "#121212",
+      "image": "./assets/imagemlogosecundaria.png",
+      "resizeMode": "contain"
+    },
+    "android": {
+      "package": "br.edu.fecap.smarttennisarena",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icon-adaptive-foreground.png",
+        "backgroundColor": "#121212"
+      }
+    },
+    "plugins": [
+      "expo-font"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "98038b05-7e45-474a-8290-29fc0228a766"
+      }
+    }
+  }
+}
