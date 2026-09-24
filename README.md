@@ -1,4 +1,4 @@
-# D2LV - TopSpin Analytics
+# D2LV - Tennis Analytics
 Grupo 3 - Projeto Interdisciplinar - 6º CCOMP
 # 🏫 FECAP - Fundação de Comércio Álvares Penteado
 <p align="center">
