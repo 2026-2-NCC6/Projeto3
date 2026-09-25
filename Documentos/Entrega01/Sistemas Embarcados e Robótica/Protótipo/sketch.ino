@@ -1,3 +1,7 @@
+
+Entrega - projeto
+Docs
+
 /*
  * Tennis Analytics - Leitura do MPU6050 (protótipo Wokwi)
  * Placa: ESP32-C3  |  Sensor: MPU6050 via I2C
@@ -7,22 +11,11 @@
  * Simulacao: https://wokwi.com/projects/475019008269947905
  *
  * ESCOPO DESTA VERSAO
- *   - Comunicacao I2C por acesso direto aos registradores (sem biblioteca
- *     externa, para nao haver conflito com o mapeamento GPIO 8 / GPIO 9).
+ *   - Utilizacao da biblioteca Adafruit para gerencia do MPU6050 via I2C.
  *   - Escala do acelerometro em +-16 g e do giroscopio em +-2000 dps.
  *   - Maquina de estados de deteccao de tacada:
  *       PARADO -> PREPARACAO -> IMPACTO -> RECUPERACAO -> PARADO
  *   - Saida formatada no Monitor Serial (115200 baud) para o relatorio.
- *
- * LIMITACOES CONHECIDAS (documentar no relatorio)
- *   - O MPU6050 satura em +-16 g. O impacto real bola-raquete pode
- *     ultrapassar esse valor conforme o ponto de fixacao do sensor.
- *     Por isso a deteccao usa o PERFIL do movimento (rotacao sustentada
- *     seguida de pico de aceleracao), e nao o valor absoluto do pico.
- *   - Os limiares abaixo sao PROVISORIOS. Precisam ser recalibrados com
- *     dados coletados com o sensor fixado ao cabo da raquete.
- *   - A regra de classificacao de golpe ainda nao foi validada contra
- *     gabarito (registro do golpe fisico realmente executado).
  */
 
 #include <Adafruit_MPU6050.h>
@@ -74,7 +67,7 @@ void setup() {
   Serial.println("MPU6050 conectado com sucesso!");
 
   mpu.setAccelerometerRange(MPU6050_RANGE_16_G);
-  mpu.setGyroRange(MPU6050_RANGE_500_DEG);
+  mpu.setGyroRange(MPU6050_RANGE_2000_DEG); // Corrigido para +-2000 dps conforme escopo
   mpu.setFilterBandwidth(MPU6050_BAND_21_HZ);
 
   delay(100);
@@ -86,12 +79,12 @@ void loop() {
   mpu.getEvent(&a, &g, &temp);
 
   float accelMag = sqrt(a.acceleration.x * a.acceleration.x +
-                         a.acceleration.y * a.acceleration.y +
-                         a.acceleration.z * a.acceleration.z);
+                        a.acceleration.y * a.acceleration.y +
+                        a.acceleration.z * a.acceleration.z);
 
   float giroMag = sqrt(g.gyro.x * g.gyro.x +
-                        g.gyro.y * g.gyro.y +
-                        g.gyro.z * g.gyro.z);
+                       g.gyro.y * g.gyro.y +
+                       g.gyro.z * g.gyro.z);
 
   unsigned long agora = millis();
 
@@ -147,11 +140,8 @@ void loop() {
       break;
   }
 
-  // Descomente as linhas abaixo pra ver os valores brutos enquanto calibra os limiares:
-  Serial.print("accelMag: "); Serial.print(accelMag);
-  Serial.print("  giroMag: "); Serial.println(giroMag);
-
-  delay(1000); // ~100 leituras/segundo -- mais rápido que o Passo 1, pra não perder o pico do impacto
+  // Leitura contínua a ~100 Hz para não perder o pico do impacto
+  delay(10); 
 }
 
 void classificarTacada() {
@@ -172,4 +162,5 @@ void classificarTacada() {
   Serial.print("  => Tipo: ");
   Serial.println(tipo);
 }
-
+Simulation
+INT AD0 XCL XDA SDA SCL GND VCC
