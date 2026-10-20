@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Modal, Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/types';
@@ -7,6 +7,8 @@ import { fonts } from '../theme/fonts';
 import { DangerButton, GhostButton, OutlineButton } from '../components/ui';
 import { IconAlert, IconPulse } from '../components/Icons';
 import { CornerWatermark } from '../components/Watermark';
+import { useBle } from '../ble/BleContext';
+import { buscarTreino } from '../data/treinos';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Sessao'>;
 
@@ -33,7 +35,11 @@ function indiceResistencia(forcas: number[]) {
   return Math.max(0, Math.min(100, Math.round(bruto)));
 }
 
-export function SessaoScreen({ navigation }: Props) {
+export function SessaoScreen({ navigation, route }: Props) {
+  const treino = buscarTreino(route.params?.treinoId);
+  const ble = useBle();
+  const sensorAtivo = ble.disponivel && ble.status === 'conectado';
+  const [usouSensor] = useState(sensorAtivo);
   const [pausado, setPausado] = useState(false);
   const [parado, setParado] = useState(false);
   const [sheetAberto, setSheetAberto] = useState(false);
@@ -59,11 +65,9 @@ export function SessaoScreen({ navigation }: Props) {
   const liveLabel = parado ? 'Parada segura' : pausado ? 'Pausado' : 'Ao vivo';
   const liveCor = parado ? colors.danger : pausado ? colors.warning : colors.primary;
 
-  function registrar(tipo: 'forte' | 'fraco' | 'erro') {
+  function registrar(ok: boolean, forca: 1 | 2 | 3, lado?: Golpe['tipo']) {
     if (parado) return;
-    const ok = tipo !== 'erro';
-    const forca: 1 | 2 | 3 = tipo === 'forte' ? 3 : tipo === 'fraco' ? 1 : 2;
-    const tipoGolpe: Golpe['tipo'] = golpes % 2 === 1 ? 'Backhand' : 'Forehand';
+    const tipoGolpe: Golpe['tipo'] = lado ?? (golpes % 2 === 1 ? 'Backhand' : 'Forehand');
     const zona = ok ? `Zona ${1 + (golpes % 2)}` : 'Fora';
     const novoStreak = ok ? streak + 1 : 0;
     const novoGolpes = golpes + 1;
@@ -79,6 +83,30 @@ export function SessaoScreen({ navigation }: Props) {
     setForcas(novasForcas);
     if (!quedaEm && indice < LIMIAR_RESISTENCIA) setQuedaEm(t);
     setFeed((f) => [{ t, tipo: tipoGolpe, zona, ok, forca }, ...f].slice(0, 4));
+  }
+
+  const registrarRef = useRef(registrar);
+  registrarRef.current = registrar;
+  const pausadoRef = useRef(pausado);
+  pausadoRef.current = pausado;
+
+  const { enviar, aoReceberGolpe } = ble;
+
+  useEffect(() => {
+    if (!usouSensor) return;
+    enviar('START');
+    const parar = aoReceberGolpe((g) => {
+      if (!pausadoRef.current) registrarRef.current(true, g.forca, g.lado);
+    });
+    return () => {
+      parar();
+      enviar('STOP');
+    };
+  }, [usouSensor, enviar, aoReceberGolpe]);
+
+  function alternarPausa() {
+    if (sensorAtivo) enviar(pausado ? 'RESUME' : 'PAUSE');
+    setPausado((p) => !p);
   }
 
   const series = useMemo(
@@ -98,7 +126,7 @@ export function SessaoScreen({ navigation }: Props) {
           <Text style={styles.timer}>{tempo}</Text>
         </View>
         <View style={styles.tituloRow}>
-          <Text style={styles.subtitulo}>Cruzado de fundo — consistência</Text>
+          <Text style={styles.subtitulo} numberOfLines={1}>{treino.nome}</Text>
           <Text style={styles.serie}>Série 3/5</Text>
         </View>
         <View style={styles.seriesBar}>
@@ -176,7 +204,7 @@ export function SessaoScreen({ navigation }: Props) {
         <OutlineButton
           label={parado ? 'Parado' : pausado ? 'Retomar' : 'Pausar'}
           disabled={parado}
-          onPress={() => setPausado((p) => !p)}
+          onPress={alternarPausa}
           style={{ flex: 1, height: 50 }}
         />
         <Pressable onPress={() => setSheetAberto(true)} style={styles.paradaBtn}>
@@ -185,14 +213,16 @@ export function SessaoScreen({ navigation }: Props) {
       </View>
 
       <View style={styles.demoRow}>
-        <Text style={styles.demoLabel}>Demo do sensor</Text>
-        <Pressable style={styles.demoBtn} onPress={() => registrar('forte')}>
+        <Text style={[styles.demoLabel, usouSensor && { color: sensorAtivo ? colors.success : colors.danger }]}>
+          {!usouSensor ? 'Demo do sensor' : sensorAtivo ? 'Sensor BLE ativo' : 'Sensor perdido'}
+        </Text>
+        <Pressable style={styles.demoBtn} onPress={() => registrar(true, 3)}>
           <Text style={styles.demoBtnLabel}>Forte</Text>
         </Pressable>
-        <Pressable style={styles.demoBtn} onPress={() => registrar('fraco')}>
+        <Pressable style={styles.demoBtn} onPress={() => registrar(true, 1)}>
           <Text style={styles.demoBtnLabel}>Fraco</Text>
         </Pressable>
-        <Pressable style={styles.demoBtn} onPress={() => registrar('erro')}>
+        <Pressable style={styles.demoBtn} onPress={() => registrar(false, 2)}>
           <Text style={styles.demoBtnLabel}>Erro</Text>
         </Pressable>
       </View>
@@ -209,6 +239,7 @@ export function SessaoScreen({ navigation }: Props) {
               <DangerButton
                 label="Parar agora"
                 onPress={() => {
+                  if (sensorAtivo) enviar('STOP');
                   setSheetAberto(false);
                   setParado(true);
                   setPausado(true);
@@ -233,7 +264,7 @@ const styles = StyleSheet.create({
   liveLabel: { fontFamily: fonts.bodyMedium, fontSize: 10.5, letterSpacing: 1.4, textTransform: 'uppercase' },
   timer: { fontFamily: fonts.mono, fontSize: 14, color: colors.textSecondary, letterSpacing: 0.5 },
   tituloRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', marginTop: 16 },
-  subtitulo: { fontFamily: fonts.body, fontSize: 13, color: colors.textSecondary },
+  subtitulo: { flex: 1, marginRight: 12, fontFamily: fonts.body, fontSize: 13, color: colors.textSecondary },
   serie: { fontFamily: fonts.displayBold, fontSize: 17, letterSpacing: 0.5, color: colors.text, textTransform: 'uppercase' },
   seriesBar: { flexDirection: 'row', gap: 4, marginTop: 9 },
   serieSeg: { flex: 1, height: 4, borderRadius: 2 },

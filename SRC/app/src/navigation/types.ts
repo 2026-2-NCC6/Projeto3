@@ -11,9 +11,9 @@ export type TabParamList = {
 export type RootStackParamList = {
   Login: undefined;
   MainTabs: NavigatorScreenParams<TabParamList> | undefined;
-  Preparacao: undefined;
-  Pareamento: undefined;
-  Sessao: undefined;
+  Preparacao: { treinoId: string } | undefined;
+  Pareamento: { treinoId: string } | undefined;
+  Sessao: { treinoId: string } | undefined;
   ParadaSegura: undefined;
   Resultado: undefined;
 };

@@ -20,7 +20,15 @@
       }
     },
     "plugins": [
-      "expo-font"
+      "expo-font",
+      [
+        "react-native-ble-plx",
+        {
+          "isBackgroundEnabled": false,
+          "neverForLocation": true,
+          "bluetoothAlwaysPermission": "O Tennis Analytics usa Bluetooth para receber os dados do sensor preso na raquete."
+        }
+      ]
     ],
     "extra": {
       "eas": {

@@ -6,6 +6,8 @@ import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
 import { PrimaryButton, ScreenHeader } from '../components/ui';
 import { CornerWatermark } from '../components/Watermark';
+import { TutorialAnimacao } from '../components/TutorialAnimacao';
+import { Nivel, buscarTreino } from '../data/treinos';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Preparacao'>;
 
@@ -33,8 +35,11 @@ const EXERCICIOS_BASE = [
 ];
 const PESOS = [0.18, 0.26, 0.35, 0.21];
 
-export function PreparacaoScreen({ navigation }: Props) {
-  const [nivel, setNivel] = useState<NivelId>('inter');
+const NIVEL_DO_TREINO: Record<Nivel, NivelId> = { Iniciante: 'ini', Intermediário: 'inter', Avançado: 'ava' };
+
+export function PreparacaoScreen({ navigation, route }: Props) {
+  const treino = buscarTreino(route.params?.treinoId);
+  const [nivel, setNivel] = useState<NivelId>(NIVEL_DO_TREINO[treino.nivel]);
   const t = TABELA[nivel];
 
   const linhas = useMemo(
@@ -65,11 +70,22 @@ export function PreparacaoScreen({ navigation }: Props) {
       <CornerWatermark />
       <ScreenHeader title="Preparação da sessão" onBack={() => navigation.goBack()} />
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.title}>Cruzado de fundo{'\n'}consistência</Text>
+        <Text style={styles.title}>{treino.nome.replace(' — ', '\n')}</Text>
         <View style={styles.metaRow}>
-          <Text style={styles.metaText}>Téc. R. Almeida</Text>
+          <Text style={styles.metaText}>{treino.autor}</Text>
           <Text style={styles.metaDot}>·</Text>
-          <Text style={styles.metaMono}>v3 · publicado</Text>
+          <Text style={styles.metaMono}>{treino.versao} · publicado</Text>
+        </View>
+
+        <Text style={[styles.eyebrow, { marginBottom: 11 }]}>Como fazer</Text>
+        <TutorialAnimacao key={treino.id} treino={treino} />
+        <View style={styles.passos}>
+          {treino.tutorial.passos.map((p, i) => (
+            <View key={p} style={styles.passoRow}>
+              <Text style={styles.passoNum}>{i + 1}</Text>
+              <Text style={styles.passoTexto}>{p}</Text>
+            </View>
+          ))}
         </View>
 
         <Text style={styles.eyebrow}>Nível de dificuldade</Text>
@@ -124,7 +140,7 @@ export function PreparacaoScreen({ navigation }: Props) {
           <Text style={styles.durationLabel}>Duração estimada</Text>
           <Text style={styles.durationValue}>{t.duracao}</Text>
         </View>
-        <PrimaryButton label="Continuar para pareamento" onPress={() => navigation.navigate('Pareamento')} />
+        <PrimaryButton label="Continuar para pareamento" onPress={() => navigation.navigate('Pareamento', { treinoId: treino.id })} />
       </View>
     </SafeAreaView>
   );
@@ -139,6 +155,10 @@ const styles = StyleSheet.create({
   metaDot: { color: colors.textQuaternary },
   metaMono: { fontFamily: fonts.mono, fontSize: 12, letterSpacing: 0.5, color: colors.textSecondary },
   eyebrow: { fontFamily: fonts.bodyMedium, fontSize: 10.5, letterSpacing: 1.6, textTransform: 'uppercase', color: colors.textSecondary, marginTop: 26 },
+  passos: { marginTop: 14, gap: 10 },
+  passoRow: { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
+  passoNum: { width: 20, height: 20, borderRadius: 10, overflow: 'hidden', backgroundColor: colors.primaryTintBg, color: colors.primary, textAlign: 'center', lineHeight: 20, fontFamily: fonts.bodyBold, fontSize: 11 },
+  passoTexto: { flex: 1, fontFamily: fonts.body, fontSize: 13, lineHeight: 19, color: colors.textSecondary },
   nivelRow: { flexDirection: 'row', gap: 8, marginTop: 11 },
   nivelBtn: { flex: 1, height: 46, borderRadius: 8, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   nivelLabel: { fontFamily: fonts.bodyMedium, fontSize: 13 },

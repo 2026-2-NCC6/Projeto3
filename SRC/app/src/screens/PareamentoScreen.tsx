@@ -7,36 +7,41 @@ import { fonts } from '../theme/fonts';
 import { IconRacket, IconSignal, IconCheck } from '../components/Icons';
 import { GhostButton, PrimaryButton, ScreenHeader } from '../components/ui';
 import { CornerWatermark } from '../components/Watermark';
+import { useAmostraAoVivo, useBle } from '../ble/BleContext';
+import { NOME_DISPOSITIVO, magnitude } from '../ble/protocolo';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Pareamento'>;
 
-type Status = 'desconectado' | 'procurando' | 'conectado';
+type Status = 'desconectado' | 'procurando' | 'conectando' | 'conectado';
 
 const LABELS: Record<Status, string> = {
   desconectado: 'Desconectado',
   procurando: 'Procurando…',
+  conectando: 'Conectando…',
   conectado: 'Conectado'
 };
 
 const DESCRICOES: Record<Status, string> = {
   desconectado: 'Ligue o módulo preso ao cabo da raquete e toque em parear.',
-  procurando: 'Aguardando o dispositivo anunciar o código na API.',
+  procurando: `Procurando o ${NOME_DISPOSITIVO} por Bluetooth.`,
+  conectando: 'Dispositivo encontrado. Abrindo o canal de dados.',
   conectado: 'Módulo respondendo. Feedback local de LED e buzzer ativo.'
 };
 
-const ITENS = [
-  { rotulo: 'Sensor de movimento (IMU)', valor: '104 Hz' },
-  { rotulo: 'Alvo de contato (piezo)', valor: 'ADC1' },
-  { rotulo: 'Simulador da máquina lançadora', valor: 'pronto' }
-];
-
-export function PareamentoScreen({ navigation }: Props) {
-  const [status, setStatus] = useState<Status>('desconectado');
+export function PareamentoScreen({ navigation, route }: Props) {
+  const ble = useBle();
+  const amostra = useAmostraAoVivo();
+  const [statusDemo, setStatusDemo] = useState<Status>('desconectado');
   const pulse = useRef(new Animated.Value(0)).current;
   const timer = useRef<ReturnType<typeof setTimeout>>();
 
+  const real = ble.disponivel;
+  const status: Status = real ? ble.status : statusDemo;
+  const buscando = status === 'procurando' || status === 'conectando';
+  const conectado = status === 'conectado';
+
   useEffect(() => {
-    if (status !== 'procurando') {
+    if (!buscando) {
       pulse.stopAnimation();
       pulse.setValue(0);
       return;
@@ -46,18 +51,38 @@ export function PareamentoScreen({ navigation }: Props) {
     );
     loop.start();
     return () => loop.stop();
-  }, [status, pulse]);
+  }, [buscando, pulse]);
 
   useEffect(() => () => timer.current && clearTimeout(timer.current), []);
 
-  const conectado = status === 'conectado';
-  const cor = conectado ? colors.success : status === 'procurando' ? colors.warning : colors.textTertiary;
+  const cor = conectado ? colors.success : buscando ? colors.warning : colors.textTertiary;
 
   function parear() {
     if (status !== 'desconectado') return;
-    setStatus('procurando');
-    timer.current = setTimeout(() => setStatus('conectado'), 1500);
+    if (real) {
+      ble.conectar();
+      return;
+    }
+    setStatusDemo('procurando');
+    timer.current = setTimeout(() => setStatusDemo('conectado'), 1500);
   }
+
+  function desconectar() {
+    if (real) ble.desconectar();
+    else setStatusDemo('desconectado');
+  }
+
+  const leituraImu = real && conectado
+    ? amostra
+      ? `${(magnitude(amostra.ax, amostra.ay, amostra.az) / 9.81).toFixed(2)} g`
+      : 'aguardando'
+    : '10 Hz';
+
+  const itens = [
+    { rotulo: 'Sensor de movimento (IMU)', valor: leituraImu },
+    { rotulo: 'Detecção de golpe no módulo', valor: '100 Hz' },
+    { rotulo: 'Simulador da máquina lançadora', valor: 'pronto' }
+  ];
 
   const scale = pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.35] });
   const opacity = pulse.interpolate({ inputRange: [0, 0.15, 1], outputRange: [0.55, 0.4, 0] });
@@ -78,25 +103,27 @@ export function PareamentoScreen({ navigation }: Props) {
         </View>
 
         <View style={{ alignItems: 'center', gap: 12 }}>
-          <View style={[styles.chip, { backgroundColor: conectado ? 'rgba(34,197,94,0.10)' : colors.surface, borderColor: conectado ? 'rgba(34,197,94,0.35)' : colors.border }]}>
+          <View style={[styles.chip, { backgroundColor: conectado ? colors.successTintBg : colors.surface, borderColor: conectado ? colors.successTintBd : colors.border }]}>
             <View style={[styles.dot, { backgroundColor: cor }]} />
             <Text style={[styles.chipLabel, { color: cor }]}>{LABELS[status]}</Text>
           </View>
-          <Text style={styles.descricao}>{DESCRICOES[status]}</Text>
+          <Text style={[styles.descricao, ble.erro && real && !conectado ? { color: colors.danger } : null]}>
+            {ble.erro && real && !conectado ? ble.erro : DESCRICOES[status]}
+          </Text>
         </View>
 
         <View style={styles.codeCard}>
           <View>
-            <Text style={styles.codeLabel}>Código da sessão</Text>
+            <Text style={styles.codeLabel}>{real ? 'Dispositivo' : 'Código da sessão'}</Text>
             <Text style={[styles.codeValue, { color: conectado ? colors.text : colors.textQuaternary }]}>
-              {conectado ? 'STA-7K42' : '— — — —'}
+              {conectado ? (real ? ble.nomeDispositivo ?? NOME_DISPOSITIVO : 'STA-7K42') : '— — — —'}
             </Text>
           </View>
-          <IconSignal color={cor} op1={status === 'desconectado' ? 0.3 : 1} op2={status === 'desconectado' ? 0.3 : status === 'procurando' ? 0.45 : 1} op3={conectado ? 1 : 0.3} />
+          <IconSignal color={cor} op1={status === 'desconectado' ? 0.3 : 1} op2={status === 'desconectado' ? 0.3 : buscando ? 0.45 : 1} op3={conectado ? 1 : 0.3} />
         </View>
 
         <View style={{ width: '100%' }}>
-          {ITENS.map((item) => (
+          {itens.map((item) => (
             <View key={item.rotulo} style={styles.checkRow}>
               <View style={[styles.checkCircle, { borderColor: conectado ? colors.success : colors.border, backgroundColor: conectado ? colors.success : 'transparent' }]}>
                 {conectado && <IconCheck />}
@@ -110,13 +137,17 @@ export function PareamentoScreen({ navigation }: Props) {
 
       <View style={styles.footer}>
         <PrimaryButton
-          label={conectado ? 'Iniciar sessão' : status === 'procurando' ? 'Procurando dispositivo…' : 'Parear dispositivo'}
-          disabled={status === 'procurando'}
-          onPress={conectado ? () => navigation.navigate('Sessao') : parear}
+          label={conectado ? 'Iniciar sessão' : buscando ? `${LABELS[status]}` : 'Parear dispositivo'}
+          disabled={buscando}
+          onPress={conectado ? () => navigation.navigate('Sessao', route.params) : parear}
         />
-        {conectado && <GhostButton label="Desconectar dispositivo" onPress={() => setStatus('desconectado')} />}
+        {conectado && <GhostButton label="Desconectar dispositivo" onPress={desconectar} />}
         {!conectado && (
-          <Text style={styles.footerNote}>O pareamento é lógico: app e dispositivo se reconhecem pela API através do código da sessão.</Text>
+          <Text style={styles.footerNote}>
+            {real
+              ? `Conexão Bluetooth LE direta com o módulo ${NOME_DISPOSITIVO}.`
+              : 'Modo demonstração: o Bluetooth real só funciona no app instalado (build), não no Expo Go.'}
+          </Text>
         )}
       </View>
     </SafeAreaView>
@@ -137,7 +168,7 @@ const styles = StyleSheet.create({
   descricao: { fontFamily: fonts.body, fontSize: 13, lineHeight: 20, color: colors.textSecondary, textAlign: 'center', maxWidth: 280 },
   codeCard: { width: '100%', backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 10, padding: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   codeLabel: { fontFamily: fonts.bodyMedium, fontSize: 10.5, letterSpacing: 1.5, textTransform: 'uppercase', color: colors.textTertiary },
-  codeValue: { marginTop: 7, fontFamily: fonts.mono, fontSize: 22, letterSpacing: 2 },
+  codeValue: { marginTop: 7, fontFamily: fonts.mono, fontSize: 20, letterSpacing: 1.5 },
   checkRow: { flexDirection: 'row', alignItems: 'center', gap: 13, paddingVertical: 13, paddingHorizontal: 2 },
   checkCircle: { width: 22, height: 22, borderRadius: 11, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
   checkLabel: { flex: 1, fontFamily: fonts.body, fontSize: 13.5 },

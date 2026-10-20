@@ -8,6 +8,7 @@ import { StatusBar } from 'expo-status-bar';
 import { colors } from './src/theme/colors';
 import { useAppFonts } from './src/theme/useAppFonts';
 import { RootNavigator } from './src/navigation/RootNavigator';
+import { BleProvider } from './src/ble/BleContext';
 
 const navTheme: Theme = {
   ...DarkTheme,
@@ -40,10 +41,12 @@ export default function App() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <StatusBar style="light" />
-        <NavigationContainer theme={navTheme}>
-          <RootNavigator />
-        </NavigationContainer>
+        <BleProvider>
+          <StatusBar style="light" />
+          <NavigationContainer theme={navTheme}>
+            <RootNavigator />
+          </NavigationContainer>
+        </BleProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

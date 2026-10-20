@@ -9,6 +9,7 @@ import { fonts } from '../theme/fonts';
 import { DangerButton, GhostButton, PageHeader, StatRow } from '../components/ui';
 import { IconShield } from '../components/Icons';
 import { CornerWatermark } from '../components/Watermark';
+import { useBle } from '../ble/BleContext';
 
 type Props = CompositeScreenProps<
   BottomTabScreenProps<TabParamList, 'Perfil'>,
@@ -25,8 +26,11 @@ const NIVEIS: Array<{ id: NivelId; label: string }> = [
 
 export function PerfilScreen({ navigation }: Props) {
   const [nivel, setNivel] = useState<NivelId>('inter');
-  const [ledAtivo, setLedAtivo] = useState(true);
-  const [buzzerAtivo, setBuzzerAtivo] = useState(true);
+  const { feedback, definirFeedback } = useBle();
+  const ledAtivo = feedback.led;
+  const buzzerAtivo = feedback.buzzer;
+  const setLedAtivo = (led: boolean) => definirFeedback({ ...feedback, led });
+  const setBuzzerAtivo = (buzzer: boolean) => definirFeedback({ ...feedback, buzzer });
 
   function sair() {
     navigation.getParent<NativeStackNavigationProp<RootStackParamList>>()?.reset({

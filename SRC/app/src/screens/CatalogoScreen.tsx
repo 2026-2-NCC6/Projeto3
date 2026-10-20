@@ -8,32 +8,12 @@ import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
 import { PageHeader, Pill } from '../components/ui';
 import { CornerWatermark } from '../components/Watermark';
+import { Nivel, TREINOS } from '../data/treinos';
 
 type Props = CompositeScreenProps<
   BottomTabScreenProps<TabParamList, 'Treinos'>,
   NativeStackScreenProps<RootStackParamList>
 >;
-
-type Nivel = 'Iniciante' | 'Intermediário' | 'Avançado';
-
-type Treino = {
-  nome: string;
-  autor: string;
-  min: number;
-  ex: number;
-  nivel: Nivel;
-  versao: string;
-  peso: 1 | 2 | 3;
-};
-
-const TREINOS: Treino[] = [
-  { nome: 'Cruzado de fundo — consistência', autor: 'Téc. R. Almeida', min: 18, ex: 4, nivel: 'Intermediário', versao: 'v3', peso: 2 },
-  { nome: 'Aquecimento progressivo', autor: 'Téc. M. Sato', min: 12, ex: 3, nivel: 'Iniciante', versao: 'v2', peso: 1 },
-  { nome: 'Alternância FH/BH sob pressão', autor: 'Téc. R. Almeida', min: 22, ex: 5, nivel: 'Avançado', versao: 'v1', peso: 3 },
-  { nome: 'Precisão em zona curta', autor: 'Téc. L. Ferraz', min: 15, ex: 4, nivel: 'Intermediário', versao: 'v4', peso: 2 },
-  { nome: 'Ritmo constante — 6 s entre bolas', autor: 'Téc. M. Sato', min: 20, ex: 3, nivel: 'Iniciante', versao: 'v1', peso: 1 },
-  { nome: 'Topspin cruzado em série longa', autor: 'Téc. L. Ferraz', min: 25, ex: 6, nivel: 'Avançado', versao: 'v2', peso: 3 }
-];
 
 const FILTROS: Array<'Todos' | Nivel> = ['Todos', 'Iniciante', 'Intermediário', 'Avançado'];
 
@@ -60,11 +40,11 @@ export function CatalogoScreen({ navigation }: Props) {
 
       <FlatList
         data={itens}
-        keyExtractor={(item) => item.nome}
+        keyExtractor={(item) => item.id}
         contentContainerStyle={styles.list}
         ListEmptyComponent={<Text style={styles.empty}>Nenhum treino publicado neste nível ainda.</Text>}
         renderItem={({ item }) => (
-          <Pressable style={styles.card} onPress={() => navigation.navigate('Preparacao')}>
+          <Pressable style={styles.card} onPress={() => navigation.navigate('Preparacao', { treinoId: item.id })}>
             <View style={styles.cardTop}>
               <Text style={styles.cardName}>{item.nome}</Text>
               <View style={styles.weightBars}>
