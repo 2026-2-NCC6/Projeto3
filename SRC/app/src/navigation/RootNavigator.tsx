@@ -15,6 +15,7 @@ import { HistoricoScreen } from '../screens/HistoricoScreen';
 import { SessaoVaziaScreen } from '../screens/SessaoVaziaScreen';
 import { PerfilScreen } from '../screens/PerfilScreen';
 import { InicioScreen } from '../screens/InicioScreen';
+import { DebugScreen } from '../screens/DebugScreen';
 import { IconHistorico, IconInicio, IconPerfil, IconSessao, IconTreinos } from '../components/Icons';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -77,6 +78,7 @@ export function RootNavigator() {
       <Stack.Screen name="Sessao" component={SessaoScreen} options={{ gestureEnabled: false }} />
       <Stack.Screen name="ParadaSegura" component={ParadaSeguraScreen} options={{ gestureEnabled: false }} />
       <Stack.Screen name="Resultado" component={ResultadoScreen} options={{ gestureEnabled: false }} />
+      <Stack.Screen name="Debug" component={DebugScreen} />
     </Stack.Navigator>
   );
 }

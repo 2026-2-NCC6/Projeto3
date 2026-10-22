@@ -7,11 +7,13 @@ import { fonts } from '../theme/fonts';
 import { GhostButton, OutlineButton, PrimaryButton } from '../components/ui';
 import { IconAlert, IconCheckCircle, IconChevronRight } from '../components/Icons';
 import { CornerWatermark } from '../components/Watermark';
+import { mmss } from '../sessao/regras';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ParadaSegura'>;
 
-export function ParadaSeguraScreen({ navigation }: Props) {
+export function ParadaSeguraScreen({ navigation, route }: Props) {
   const [confirmando, setConfirmando] = useState(false);
+  const resumo = route.params?.resumo;
 
   return (
     <SafeAreaView style={styles.screen}>
@@ -20,7 +22,7 @@ export function ParadaSeguraScreen({ navigation }: Props) {
         <IconAlert />
         <Text style={styles.heroTitle}>Parada segura{'\n'}acionada</Text>
         <Text style={styles.heroBody}>
-          A máquina lançadora foi interrompida e o dispositivo entrou em estado <Text style={styles.mono}>PARADO</Text>. Nenhum dado da sessão foi perdido.
+          A placa confirmou a parada e entrou em estado <Text style={styles.mono}>PARADO</Text>. Nenhum dado da sessão foi perdido.
         </Text>
       </View>
 
@@ -48,21 +50,23 @@ export function ParadaSeguraScreen({ navigation }: Props) {
         <Text style={styles.eyebrow}>Preservado da sessão</Text>
         <View style={styles.statsRow}>
           <View style={styles.statCard}>
-            <Text style={styles.statValue}>48</Text>
+            <Text style={styles.statValue}>{resumo ? resumo.golpes : 48}</Text>
             <Text style={styles.statLabel}>golpes</Text>
           </View>
           <View style={styles.statCard}>
-            <Text style={styles.statValue}>1.290</Text>
+            <Text style={styles.statValue}>{(resumo ? resumo.pontos : 1290).toLocaleString('pt-BR')}</Text>
             <Text style={styles.statLabel}>pontos</Text>
           </View>
           <View style={styles.statCard}>
-            <Text style={styles.statValue}>3:04</Text>
+            <Text style={styles.statValue}>{mmss(resumo ? resumo.duracaoSeg : 184)}</Text>
             <Text style={styles.statLabel}>decorrido</Text>
           </View>
         </View>
         <View style={styles.syncRow}>
           <IconCheckCircle />
-          <Text style={styles.syncText}>Eventos enviados à API — nada pendente na fila local.</Text>
+          <Text style={styles.syncText}>
+            {resumo?.origem === 'sensor' ? 'Golpes recebidos do sensor e guardados no celular.' : 'Sessão de demonstração, sem sensor conectado.'}
+          </Text>
         </View>
       </View>
 
@@ -72,7 +76,7 @@ export function ParadaSeguraScreen({ navigation }: Props) {
         {!confirmando ? (
           <View style={{ gap: 10 }}>
             <PrimaryButton label="Reiniciar sessão" onPress={() => setConfirmando(true)} />
-            <GhostButton label="Encerrar e ver resultado" onPress={() => navigation.navigate('Resultado')} />
+            <GhostButton label="Encerrar e ver resultado" onPress={() => navigation.navigate('Resultado', resumo ? { resumo } : undefined)} />
           </View>
         ) : (
           <View style={{ gap: 12 }}>

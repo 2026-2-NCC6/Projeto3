@@ -5,6 +5,8 @@ import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
 import { PageHeader, Pill, SegmentTab } from '../components/ui';
 import { CornerWatermark } from '../components/Watermark';
+import { buscarTreino } from '../data/treinos';
+import { useSessoesRecentes } from '../sessao/historicoSessoes';
 
 type MetricaId = 'precisao' | 'consistencia' | 'volume' | 'resistencia';
 type PeriodoId = 'p7' | 'p30' | 'p90';
@@ -47,10 +49,12 @@ const LABELS: Record<PeriodoId, string[]> = { p7: DIAS_7, p30: DIAS_30, p90: SEM
 const SESSOES_COUNT: Record<PeriodoId, number> = { p7: 6, p30: 14, p90: 41 };
 
 const SESSOES = [
-  { dia: '27', mes: 'ago', treino: 'Cruzado de fundo — consistência', golpes: 114, pontos: '1.480', precisao: 72 },
-  { dia: '26', mes: 'ago', treino: 'Precisão em zona curta', golpes: 124, pontos: '1.610', precisao: 75 },
-  { dia: '24', mes: 'ago', treino: 'Alternância FH/BH sob pressão', golpes: 132, pontos: '1.390', precisao: 72 }
+  { chave: 'ex1', dia: '27', mes: 'ago', treino: 'Cruzado de fundo — consistência', golpes: 114, pontos: '1.480', precisao: 72 },
+  { chave: 'ex2', dia: '26', mes: 'ago', treino: 'Precisão em zona curta', golpes: 124, pontos: '1.610', precisao: 75 },
+  { chave: 'ex3', dia: '24', mes: 'ago', treino: 'Alternância FH/BH sob pressão', golpes: 132, pontos: '1.390', precisao: 72 }
 ];
+
+const MESES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
 
 const W = 318;
 const H = 150;
@@ -60,6 +64,19 @@ export function HistoricoScreen() {
   const [periodo, setPeriodo] = useState<PeriodoId>('p7');
   const [metrica, setMetrica] = useState<MetricaId>('precisao');
   const [indiceSel, setIndiceSel] = useState(-1);
+  const sessoesReais = useSessoesRecentes();
+  const reais = sessoesReais.map((r) => {
+    const d = new Date(r.terminadaEm);
+    return {
+      chave: `${r.treinoId}-${r.terminadaEm}`,
+      dia: String(d.getDate()).padStart(2, '0'),
+      mes: MESES[d.getMonth()],
+      treino: buscarTreino(r.treinoId).nome,
+      golpes: r.golpes,
+      pontos: r.pontos.toLocaleString('pt-BR'),
+      precisao: r.golpes ? Math.round((r.acertos / r.golpes) * 100) : 0
+    };
+  });
 
   const conj = DADOS[metrica];
   const vals = conj[periodo];
@@ -177,8 +194,8 @@ export function HistoricoScreen() {
         </View>
 
         <Text style={[styles.headlineEyebrow, { marginTop: 26, marginBottom: 6 }]}>Sessões recentes</Text>
-        {SESSOES.map((s) => (
-          <Pressable key={s.treino} style={styles.sessaoRow}>
+        {[...reais, ...SESSOES].map((s) => (
+          <Pressable key={s.chave} style={styles.sessaoRow}>
             <View style={styles.sessaoData}>
               <Text style={styles.sessaoDia}>{s.dia}</Text>
               <Text style={styles.sessaoMes}>{s.mes}</Text>

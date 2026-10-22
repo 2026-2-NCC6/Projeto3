@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/types';
@@ -7,15 +7,26 @@ import { fonts } from '../theme/fonts';
 import { PageHeader, PrimaryButton, OutlineButton, SegmentTab, StatRow } from '../components/ui';
 import { IconCalendar, IconCheckCircle, IconLocked, IconTrophy } from '../components/Icons';
 import { CornerWatermark } from '../components/Watermark';
+import { buscarTreino } from '../data/treinos';
+import { LIMIAR_RESISTENCIA, META_POR_NIVEL, mmss } from '../sessao/regras';
+import { registrarSessao } from '../sessao/historicoSessoes';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Resultado'>;
 
 type Aba = 'resumo' | 'zonas' | 'resistencia';
 
-const GOLPES = [
-  { nome: 'Forehand', acertos: 51, total: 69 },
-  { nome: 'Backhand', acertos: 31, total: 45 }
-];
+// Dados de exemplo, usados só quando a tela abre sem uma sessão (modo apresentação).
+const EXEMPLO = {
+  golpes: 114,
+  acertos: 82,
+  pontos: 1480,
+  melhorSequencia: 9,
+  fortes: 41,
+  duracaoSeg: 18 * 60,
+  porLado: { Forehand: { acertos: 51, total: 69 }, Backhand: { acertos: 31, total: 45 } },
+  quartisForca: [2.8, 2.6, 2.1, 1.7],
+  quedaEmSeg: (14 * 60 + 52) as number | null
+};
 
 const ZONAS = [
   { rotulo: 'Fundo esq.', n: 11 },
@@ -26,81 +37,94 @@ const ZONAS = [
   { rotulo: 'Meio dir.', n: 8 }
 ];
 
-const QUARTIS = [
-  { rotulo: '1º quarto', forca: 2.8 },
-  { rotulo: '2º quarto', forca: 2.6 },
-  { rotulo: '3º quarto', forca: 2.1 },
-  { rotulo: '4º quarto', forca: 1.7 }
-];
+const ROTULOS_QUARTIS = ['1º quarto', '2º quarto', '3º quarto', '4º quarto'];
 
-export function ResultadoScreen({ navigation }: Props) {
+export function ResultadoScreen({ navigation, route }: Props) {
+  const resumo = route.params?.resumo;
+  const real = resumo !== undefined;
+  const treino = buscarTreino(resumo?.treinoId);
+  const dados = resumo ?? EXEMPLO;
   const [aba, setAba] = useState<Aba>('resumo');
 
+  useEffect(() => {
+    if (resumo && resumo.golpes > 0) registrarSessao(resumo);
+  }, [resumo]);
+
+  const precisao = dados.golpes ? Math.round((dados.acertos / dados.golpes) * 100) : 0;
+  const meta = META_POR_NIVEL[treino.nivel];
+  const bateuMeta = dados.golpes > 0 && precisao >= meta;
+
   const golpes = useMemo(
-    () => GOLPES.map((g) => ({ ...g, pct: Math.round((g.acertos / g.total) * 100) })),
-    []
+    () =>
+      (['Forehand', 'Backhand'] as const).map((nome) => {
+        const { acertos, total } = dados.porLado[nome];
+        return { nome, acertos, total, pct: total ? Math.round((acertos / total) * 100) : 0 };
+      }),
+    [dados]
   );
 
   const maiorZona = Math.max(...ZONAS.map((z) => z.n));
-  const zonas = useMemo(
-    () =>
-      ZONAS.map((z) => {
-        const a = 0.05 + (z.n / maiorZona) * 0.24;
-        return {
-          ...z,
-          bg: `rgba(34,197,94,${a.toFixed(3)})`,
-          bd: `rgba(34,197,94,${(0.14 + (z.n / maiorZona) * 0.3).toFixed(3)})`,
-          fg: z.n >= maiorZona * 0.6 ? colors.success : colors.text
-        };
-      }),
-    [maiorZona]
-  );
+  const zonas = ZONAS.map((z) => ({
+    ...z,
+    bg: `rgba(34,197,94,${(0.05 + (z.n / maiorZona) * 0.24).toFixed(3)})`,
+    bd: `rgba(34,197,94,${(0.14 + (z.n / maiorZona) * 0.3).toFixed(3)})`,
+    fg: z.n >= maiorZona * 0.6 ? colors.success : colors.text
+  }));
 
-  const baseQ = QUARTIS[0].forca;
-  const quartis = useMemo(
-    () =>
-      QUARTIS.map((q) => ({
-        ...q,
-        altura: Math.round((q.forca / 3) * 56),
-        cor: q.forca < baseQ * 0.7 ? colors.danger : colors.success
-      })),
-    [baseQ]
-  );
+  const baseQ = dados.quartisForca.find((f) => f > 0) ?? 0;
+  const quartis = dados.quartisForca.map((forca, i) => ({
+    rotulo: ROTULOS_QUARTIS[i],
+    forca,
+    altura: Math.max(forca > 0 ? 4 : 2, Math.round((forca / 3) * 56)),
+    cor: forca === 0 ? colors.border : forca < baseQ * (LIMIAR_RESISTENCIA / 100) ? colors.danger : colors.success
+  }));
+
+  const hora = new Date(resumo?.terminadaEm ?? Date.now());
+  const quando = `Hoje, ${String(hora.getHours()).padStart(2, '0')}:${String(hora.getMinutes()).padStart(2, '0')}`;
+  const duracaoMin = Math.max(1, Math.round(dados.duracaoSeg / 60));
 
   return (
     <SafeAreaView style={styles.screen}>
       <CornerWatermark />
       <ScrollView contentContainerStyle={styles.content}>
-        <PageHeader eyebrow="Sessão concluída" title={'Cruzado de fundo\nconsistência'} />
-        <Text style={styles.subMeta}>Hoje, 19:24 · Intermediário · 18 min</Text>
+        <PageHeader eyebrow="Sessão concluída" title={treino.nome.replace(' — ', '\n')} />
+        <Text style={styles.subMeta}>
+          {quando} · {treino.nivel} · {duracaoMin} min{resumo?.origem === 'demo' ? ' · demonstração' : ''}
+        </Text>
 
         <View style={styles.heroRow}>
           <View>
             <Text style={styles.statLabelSmall}>Precisão</Text>
             <View style={styles.heroValueRow}>
-              <Text style={styles.heroValue}>72</Text>
-              <Text style={styles.heroUnit}>%</Text>
+              <Text style={styles.heroValue}>{dados.golpes ? precisao : '—'}</Text>
+              {dados.golpes > 0 && <Text style={styles.heroUnit}>%</Text>}
             </View>
           </View>
           <View style={styles.statsCol}>
-            <StatRow label="Pontos" value="1.480" />
+            <StatRow label="Pontos" value={dados.pontos.toLocaleString('pt-BR')} />
             <View style={styles.divider} />
-            <StatRow label="Golpes" value="114" />
+            <StatRow label="Golpes" value={String(dados.golpes)} />
             <View style={styles.divider} />
-            <StatRow label="Melhor sequência" value="×9" />
+            <StatRow label="Melhor sequência" value={`×${dados.melhorSequencia}`} />
             <View style={styles.divider} />
-            <StatRow label="Golpes fortes" value="41" />
+            <StatRow label="Golpes fortes" value={String(dados.fortes)} />
           </View>
         </View>
 
-        <View style={styles.metaBanner}>
-          <IconCheckCircle size={16} />
-          <Text style={styles.metaBannerText}>Meta do nível superada — 72% contra 60% exigidos.</Text>
+        <View style={[styles.metaBanner, !bateuMeta && { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <IconCheckCircle size={16} color={bateuMeta ? colors.success : colors.textTertiary} />
+          <Text style={[styles.metaBannerText, !bateuMeta && { color: colors.textSecondary }]}>
+            {dados.golpes === 0
+              ? 'Nenhum golpe registrado nesta sessão.'
+              : bateuMeta
+                ? `Meta do nível superada — ${precisao}% contra ${meta}% exigidos.`
+                : `Meta do nível: ${meta}%. Você fez ${precisao}% — falta pouco.`}
+          </Text>
         </View>
 
         <View style={styles.tabs}>
           <SegmentTab label="Resumo" active={aba === 'resumo'} onPress={() => setAba('resumo')} />
-          <SegmentTab label="Zonas do alvo" active={aba === 'zonas'} onPress={() => setAba('zonas')} />
+          {!real && <SegmentTab label="Zonas do alvo" active={aba === 'zonas'} onPress={() => setAba('zonas')} />}
           <SegmentTab label="Resistência" active={aba === 'resistencia'} onPress={() => setAba('resistencia')} />
         </View>
 
@@ -118,12 +142,14 @@ export function ResultadoScreen({ navigation }: Props) {
               </View>
             ))}
             <Text style={styles.footnote}>
-              Classificação por assinatura do giroscópio no momento do contato. Golpes sem correspondência com um lançamento são descartados.
+              {real
+                ? 'Lado identificado pela rotação da raquete (giroscópio). Acerto é o golpe no lado que o exercício pedia.'
+                : 'Classificação por assinatura do giroscópio no momento do contato.'}
             </Text>
           </View>
         )}
 
-        {aba === 'zonas' && (
+        {aba === 'zonas' && !real && (
           <View style={{ marginTop: 20 }}>
             <View style={styles.zonasGrid}>
               {zonas.map((z) => (
@@ -146,9 +172,13 @@ export function ResultadoScreen({ navigation }: Props) {
             <View style={styles.resistHeroRow}>
               <View>
                 <Text style={styles.statLabelSmall}>Resistência</Text>
-                <Text style={styles.resistHeroValue}>14:52</Text>
+                <Text style={[styles.resistHeroValue, dados.quedaEmSeg === null && { color: colors.success }]}>
+                  {dados.quedaEmSeg === null ? 'Estável' : mmss(dados.quedaEmSeg)}
+                </Text>
               </View>
-              <Text style={styles.resistHeroCaption}>até a força{'\n'}cair abaixo de 70%</Text>
+              <Text style={styles.resistHeroCaption}>
+                {dados.quedaEmSeg === null ? `força acima de ${LIMIAR_RESISTENCIA}%\na sessão inteira` : `até a força\ncair abaixo de ${LIMIAR_RESISTENCIA}%`}
+              </Text>
             </View>
             <View style={styles.quartisRow}>
               {quartis.map((q) => (
@@ -161,7 +191,7 @@ export function ResultadoScreen({ navigation }: Props) {
               ))}
             </View>
             <Text style={styles.footnote}>
-              Força estimada pelo perfil de aceleração do swing no punho da raquete — não pelo pico de impacto, que satura o sensor no contato.
+              Força estimada pelo pico de rotação do swing no punho da raquete — não pelo pico de impacto, que satura o sensor no contato.
             </Text>
           </View>
         )}
@@ -169,24 +199,28 @@ export function ResultadoScreen({ navigation }: Props) {
         <View style={styles.achievementsSection}>
           <Text style={styles.eyebrow}>Conquistas</Text>
           <View style={styles.achievementsGrid}>
-            <View style={[styles.achievement, { backgroundColor: colors.successTintBg, borderColor: colors.successTintBd }]}>
-              <IconTrophy />
-              <Text style={[styles.achievementLabel, { color: colors.success }]}>Sequência de 9</Text>
+            <View style={[styles.achievement, dados.melhorSequencia >= 5 ? { backgroundColor: colors.successTintBg, borderColor: colors.successTintBd } : { opacity: 0.5 }]}>
+              {dados.melhorSequencia >= 5 ? <IconTrophy /> : <IconLocked />}
+              <Text style={[styles.achievementLabel, dados.melhorSequencia >= 5 && { color: colors.success }]}>
+                {dados.melhorSequencia >= 5 ? `Sequência de ${dados.melhorSequencia}` : 'Sequência de 5'}
+              </Text>
             </View>
-            <View style={styles.achievement}>
-              <IconCalendar />
-              <Text style={styles.achievementLabel}>5 dias seguidos</Text>
+            <View style={[styles.achievement, !bateuMeta && { opacity: 0.5 }]}>
+              {bateuMeta ? <IconCalendar /> : <IconLocked />}
+              <Text style={styles.achievementLabel}>Meta do nível</Text>
             </View>
-            <View style={[styles.achievement, { opacity: 0.5 }]}>
-              <IconLocked />
-              <Text style={[styles.achievementLabel, { color: colors.textTertiary }]}>80% em série</Text>
+            <View style={[styles.achievement, precisao < 80 && { opacity: 0.5 }]}>
+              {precisao >= 80 ? <IconTrophy /> : <IconLocked />}
+              <Text style={[styles.achievementLabel, precisao < 80 && { color: colors.textTertiary }]}>80% na sessão</Text>
             </View>
           </View>
         </View>
 
         <View style={styles.syncRow}>
           <IconCheckCircle />
-          <Text style={styles.syncText}>Resultado sincronizado — já disponível para consulta no site.</Text>
+          <Text style={styles.syncText}>
+            {real ? 'Sessão salva no histórico deste celular.' : 'Dados de exemplo — faça uma sessão para ver os seus.'}
+          </Text>
         </View>
       </ScrollView>
 

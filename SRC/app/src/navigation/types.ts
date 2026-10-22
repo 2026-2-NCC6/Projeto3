@@ -1,4 +1,5 @@
 import { NavigatorScreenParams } from '@react-navigation/native';
+import type { ResumoSessao } from '../sessao/regras';
 
 export type TabParamList = {
   Inicio: undefined;
@@ -14,6 +15,7 @@ export type RootStackParamList = {
   Preparacao: { treinoId: string } | undefined;
   Pareamento: { treinoId: string } | undefined;
   Sessao: { treinoId: string } | undefined;
-  ParadaSegura: undefined;
-  Resultado: undefined;
+  ParadaSegura: { resumo: ResumoSessao } | undefined;
+  Resultado: { resumo: ResumoSessao } | undefined;
+  Debug: undefined;
 };

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ScrollView, SafeAreaView, StyleSheet, Switch, Text, View } from 'react-native';
+import { ScrollView, SafeAreaView, StyleSheet, Text, View } from 'react-native';
 import type { CompositeScreenProps } from '@react-navigation/native';
 import type { NativeStackNavigationProp, NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
@@ -9,7 +9,6 @@ import { fonts } from '../theme/fonts';
 import { DangerButton, GhostButton, PageHeader, StatRow } from '../components/ui';
 import { IconShield } from '../components/Icons';
 import { CornerWatermark } from '../components/Watermark';
-import { useBle } from '../ble/BleContext';
 
 type Props = CompositeScreenProps<
   BottomTabScreenProps<TabParamList, 'Perfil'>,
@@ -26,11 +25,6 @@ const NIVEIS: Array<{ id: NivelId; label: string }> = [
 
 export function PerfilScreen({ navigation }: Props) {
   const [nivel, setNivel] = useState<NivelId>('inter');
-  const { feedback, definirFeedback } = useBle();
-  const ledAtivo = feedback.led;
-  const buzzerAtivo = feedback.buzzer;
-  const setLedAtivo = (led: boolean) => definirFeedback({ ...feedback, led });
-  const setBuzzerAtivo = (buzzer: boolean) => definirFeedback({ ...feedback, buzzer });
 
   function sair() {
     navigation.getParent<NativeStackNavigationProp<RootStackParamList>>()?.reset({
@@ -111,30 +105,18 @@ export function PerfilScreen({ navigation }: Props) {
           <View style={styles.toggleRow}>
             <View style={{ flex: 1 }}>
               <Text style={styles.toggleLabel}>LED</Text>
-              <Text style={styles.toggleNote}>Sinal visual de acerto (verde) e erro (vermelho) no módulo.</Text>
+              <Text style={styles.toggleNote}>Pisca na placa a cada golpe detectado.</Text>
             </View>
-            <Switch
-              value={ledAtivo}
-              onValueChange={setLedAtivo}
-              trackColor={{ false: colors.border, true: colors.primaryTintBd }}
-              thumbColor={ledAtivo ? colors.primary : colors.textTertiary}
-            />
           </View>
           <View style={styles.divider} />
           <View style={styles.toggleRow}>
             <View style={{ flex: 1 }}>
               <Text style={styles.toggleLabel}>Buzzer</Text>
-              <Text style={styles.toggleNote}>Tom sonoro distinto por evento — alternativa a sinal exclusivamente visual.</Text>
+              <Text style={styles.toggleNote}>Tom mais agudo quanto mais forte o golpe — alternativa a sinal só visual.</Text>
             </View>
-            <Switch
-              value={buzzerAtivo}
-              onValueChange={setBuzzerAtivo}
-              trackColor={{ false: colors.border, true: colors.primaryTintBd }}
-              thumbColor={buzzerAtivo ? colors.primary : colors.textTertiary}
-            />
           </View>
         </View>
-        <Text style={styles.note}>Manter os dois ativos garante feedback acessível mesmo se um canal falhar em quadra.</Text>
+        <Text style={styles.note}>O feedback é decidido na própria placa, sem esperar o celular, e fica sempre ligado.</Text>
 
         <Text style={styles.sectionTitle}>Privacidade e dados</Text>
         <View style={styles.card}>

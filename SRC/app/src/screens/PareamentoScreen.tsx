@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Animated, Easing, SafeAreaView, StyleSheet, Text, View } from 'react-native';
+import { Animated, Easing, Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/types';
 import { colors } from '../theme/colors';
@@ -7,37 +7,38 @@ import { fonts } from '../theme/fonts';
 import { IconRacket, IconSignal, IconCheck } from '../components/Icons';
 import { GhostButton, PrimaryButton, ScreenHeader } from '../components/ui';
 import { CornerWatermark } from '../components/Watermark';
-import { useAmostraAoVivo, useBle } from '../ble/BleContext';
-import { NOME_DISPOSITIVO, magnitude } from '../ble/protocolo';
+import { StatusBle, useBle } from '../ble/BleContext';
+import { NOME_DISPOSITIVO } from '../ble/protocolo';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Pareamento'>;
 
-type Status = 'desconectado' | 'procurando' | 'conectando' | 'conectado';
+type Status = StatusBle;
 
 const LABELS: Record<Status, string> = {
   desconectado: 'Desconectado',
   procurando: 'Procurando…',
   conectando: 'Conectando…',
-  conectado: 'Conectado'
+  conectado: 'Conectado',
+  reconectando: 'Reconectando…'
 };
 
 const DESCRICOES: Record<Status, string> = {
   desconectado: 'Ligue o módulo preso ao cabo da raquete e toque em parear.',
   procurando: `Procurando o ${NOME_DISPOSITIVO} por Bluetooth.`,
-  conectando: 'Dispositivo encontrado. Abrindo o canal de dados.',
-  conectado: 'Módulo respondendo. Feedback local de LED e buzzer ativo.'
+  conectando: 'Dispositivo encontrado. Aguardando a resposta da placa.',
+  conectado: 'Placa respondendo. LED e buzzer da raquete confirmam cada golpe.',
+  reconectando: 'A conexão caiu. Tentando de novo sozinho a cada poucos segundos.'
 };
 
 export function PareamentoScreen({ navigation, route }: Props) {
   const ble = useBle();
-  const amostra = useAmostraAoVivo();
   const [statusDemo, setStatusDemo] = useState<Status>('desconectado');
   const pulse = useRef(new Animated.Value(0)).current;
   const timer = useRef<ReturnType<typeof setTimeout>>();
 
   const real = ble.disponivel;
   const status: Status = real ? ble.status : statusDemo;
-  const buscando = status === 'procurando' || status === 'conectando';
+  const buscando = status === 'procurando' || status === 'conectando' || status === 'reconectando';
   const conectado = status === 'conectado';
 
   useEffect(() => {
@@ -72,16 +73,12 @@ export function PareamentoScreen({ navigation, route }: Props) {
     else setStatusDemo('desconectado');
   }
 
-  const leituraImu = real && conectado
-    ? amostra
-      ? `${(magnitude(amostra.ax, amostra.ay, amostra.az) / 9.81).toFixed(2)} g`
-      : 'aguardando'
-    : '10 Hz';
+  const sensorComFalha = real && ble.erroSensor;
 
   const itens = [
-    { rotulo: 'Sensor de movimento (IMU)', valor: leituraImu },
-    { rotulo: 'Detecção de golpe no módulo', valor: '100 Hz' },
-    { rotulo: 'Simulador da máquina lançadora', valor: 'pronto' }
+    { rotulo: 'Sensor de movimento (IMU)', valor: sensorComFalha ? 'ERR:MPU' : 'ok', falha: sensorComFalha },
+    { rotulo: 'Estado da placa', valor: real ? ble.estadoDispositivo ?? '—' : 'AGUARDANDO', falha: false },
+    { rotulo: 'Detecção de golpe no módulo', valor: '100 Hz', falha: false }
   ];
 
   const scale = pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.35] });
@@ -112,7 +109,12 @@ export function PareamentoScreen({ navigation, route }: Props) {
           </Text>
         </View>
 
-        <View style={styles.codeCard}>
+        <Pressable
+          style={styles.codeCard}
+          onLongPress={real ? () => navigation.navigate('Debug') : undefined}
+          delayLongPress={700}
+          accessibilityHint={real ? 'Toque longo abre a tela de diagnóstico do sensor' : undefined}
+        >
           <View>
             <Text style={styles.codeLabel}>{real ? 'Dispositivo' : 'Código da sessão'}</Text>
             <Text style={[styles.codeValue, { color: conectado ? colors.text : colors.textQuaternary }]}>
@@ -120,16 +122,23 @@ export function PareamentoScreen({ navigation, route }: Props) {
             </Text>
           </View>
           <IconSignal color={cor} op1={status === 'desconectado' ? 0.3 : 1} op2={status === 'desconectado' ? 0.3 : buscando ? 0.45 : 1} op3={conectado ? 1 : 0.3} />
-        </View>
+        </Pressable>
 
         <View style={{ width: '100%' }}>
           {itens.map((item) => (
             <View key={item.rotulo} style={styles.checkRow}>
-              <View style={[styles.checkCircle, { borderColor: conectado ? colors.success : colors.border, backgroundColor: conectado ? colors.success : 'transparent' }]}>
-                {conectado && <IconCheck />}
+              <View
+                style={[
+                  styles.checkCircle,
+                  item.falha
+                    ? { borderColor: colors.danger, backgroundColor: colors.dangerTintBg }
+                    : { borderColor: conectado ? colors.success : colors.border, backgroundColor: conectado ? colors.success : 'transparent' }
+                ]}
+              >
+                {conectado && !item.falha && <IconCheck />}
               </View>
               <Text style={[styles.checkLabel, { color: conectado ? colors.text : colors.textTertiary }]}>{item.rotulo}</Text>
-              <Text style={styles.checkValue}>{conectado ? item.valor : '—'}</Text>
+              <Text style={[styles.checkValue, item.falha && { color: colors.danger }]}>{conectado ? item.valor : '—'}</Text>
             </View>
           ))}
         </View>
@@ -137,11 +146,21 @@ export function PareamentoScreen({ navigation, route }: Props) {
 
       <View style={styles.footer}>
         <PrimaryButton
-          label={conectado ? 'Iniciar sessão' : buscando ? `${LABELS[status]}` : 'Parear dispositivo'}
-          disabled={buscando}
+          label={
+            sensorComFalha && conectado
+              ? 'Sensor com falha (ERR:MPU)'
+              : conectado
+                ? 'Iniciar sessão'
+                : buscando
+                  ? LABELS[status]
+                  : 'Parear dispositivo'
+          }
+          disabled={buscando || (conectado && sensorComFalha)}
           onPress={conectado ? () => navigation.navigate('Sessao', route.params) : parear}
         />
-        {conectado && <GhostButton label="Desconectar dispositivo" onPress={desconectar} />}
+        {(conectado || status === 'reconectando') && (
+          <GhostButton label={conectado ? 'Desconectar dispositivo' : 'Parar de tentar'} onPress={desconectar} />
+        )}
         {!conectado && (
           <Text style={styles.footerNote}>
             {real

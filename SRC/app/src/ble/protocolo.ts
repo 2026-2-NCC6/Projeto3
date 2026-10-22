@@ -1,12 +1,17 @@
+// Contrato BLE: plano-app-ble.md, seção 1. O firmware (SRC/arduino/tennis_imu) segue o mesmo quadro.
 export const SERVICE_UUID = '4fafc201-1fb5-459e-8fcc-c5c9c331914b';
 export const CHAR_DADOS_UUID = 'beb5483e-36e1-4688-b7f5-ea07361b26a8';
 export const CHAR_CMD_UUID = 'beb5483e-36e1-4688-b7f5-ea07361b26a9';
 export const NOME_DISPOSITIVO = 'ArduinoR4-IMU';
 
-export type Comando = 'START' | 'PAUSE' | 'RESUME' | 'STOP' | 'PING' | 'LED:0' | 'LED:1' | 'BUZ:0' | 'BUZ:1';
+export const TAMANHO_MAX_MSG = 20;
+export const SEQ_MAX = 9999;
+
+export type Comando = 'START' | 'PAUSE' | 'RESUME' | 'STOP' | 'PING' | 'DBG:0' | 'DBG:1';
 
 export type EstadoDispositivo = 'AGUARDANDO' | 'COLETANDO' | 'PAUSADO' | 'PARADO';
 
+/** Acelerômetro em g, giroscópio em rad/s. */
 export type Amostra = { ax: number; ay: number; az: number; gx: number; gy: number; gz: number };
 
 export type GolpeSensor = {
@@ -14,42 +19,52 @@ export type GolpeSensor = {
   picoG: number;
   picoGiro: number;
   forca: 1 | 2 | 3;
+  seq: number;
 };
 
 export type Mensagem =
-  | { tipo: 'amostra'; amostra: Amostra }
   | { tipo: 'golpe'; golpe: GolpeSensor }
   | { tipo: 'estado'; estado: EstadoDispositivo }
-  | { tipo: 'erro'; texto: string };
+  | { tipo: 'erro'; texto: string }
+  | { tipo: 'acel'; x: number; y: number; z: number }
+  | { tipo: 'giro'; x: number; y: number; z: number }
+  | { tipo: 'amostra'; amostra: Amostra };
 
 const ESTADOS: EstadoDispositivo[] = ['AGUARDANDO', 'COLETANDO', 'PAUSADO', 'PARADO'];
+const NUMERO = /^-?\d+(\.\d+)?$/;
+const INTEIRO = /^\d+$/;
+const G = 9.80665;
 
 function numeros(texto: string, quantidade: number): number[] | null {
-  const partes = texto.split(',').map(Number);
-  if (partes.length !== quantidade || partes.some((n) => !Number.isFinite(n))) return null;
-  return partes;
+  const partes = texto.split(',');
+  if (partes.length !== quantidade || !partes.every((p) => NUMERO.test(p))) return null;
+  return partes.map(Number);
+}
+
+function interpretarGolpe(corpo: string): GolpeSensor | null {
+  const campos = corpo.split(',');
+  if (campos.length !== 5) return null;
+  const [lado, picoG, picoGiro, forca, seq] = campos;
+  if (lado !== 'F' && lado !== 'B') return null;
+  if (!NUMERO.test(picoG) || !NUMERO.test(picoGiro) || !INTEIRO.test(forca) || !INTEIRO.test(seq)) return null;
+  const f = Number(forca);
+  const s = Number(seq);
+  if (f < 1 || f > 3 || s > SEQ_MAX || Number(picoG) < 0 || Number(picoGiro) < 0) return null;
+  return {
+    lado: lado === 'F' ? 'Forehand' : 'Backhand',
+    picoG: Number(picoG),
+    picoGiro: Number(picoGiro),
+    forca: f as 1 | 2 | 3,
+    seq: s
+  };
 }
 
 export function interpretarMensagem(bruta: string): Mensagem | null {
   const texto = bruta.trim();
 
-  if (texto.startsWith('A:')) {
-    const [acel, giro] = texto.slice(2).split('|G:');
-    const a = acel ? numeros(acel, 3) : null;
-    const g = giro ? numeros(giro, 3) : null;
-    if (!a || !g) return null;
-    return { tipo: 'amostra', amostra: { ax: a[0], ay: a[1], az: a[2], gx: g[0], gy: g[1], gz: g[2] } };
-  }
-
   if (texto.startsWith('S:')) {
-    const [lado, ...resto] = texto.slice(2).split(',');
-    const valores = numeros(resto.join(','), 3);
-    if ((lado !== 'F' && lado !== 'B') || !valores) return null;
-    const forca = Math.min(3, Math.max(1, Math.round(valores[2]))) as 1 | 2 | 3;
-    return {
-      tipo: 'golpe',
-      golpe: { lado: lado === 'F' ? 'Forehand' : 'Backhand', picoG: valores[0], picoGiro: valores[1], forca }
-    };
+    const golpe = interpretarGolpe(texto.slice(2));
+    return golpe ? { tipo: 'golpe', golpe } : null;
   }
 
   if (texto.startsWith('E:')) {
@@ -58,10 +73,40 @@ export function interpretarMensagem(bruta: string): Mensagem | null {
   }
 
   if (texto.startsWith('ERR:')) {
-    return { tipo: 'erro', texto: texto.slice(4) };
+    return texto.length > 4 ? { tipo: 'erro', texto: texto.slice(4) } : null;
+  }
+
+  if (texto.startsWith('A:')) {
+    // Formato antigo de uma mensagem só (m/s²), mantido por compatibilidade. Só chega inteiro com MTU maior.
+    if (texto.includes('|G:')) {
+      const [acel, giro] = texto.slice(2).split('|G:');
+      const a = numeros(acel, 3);
+      const g = numeros(giro, 3);
+      if (!a || !g) return null;
+      return { tipo: 'amostra', amostra: { ax: a[0] / G, ay: a[1] / G, az: a[2] / G, gx: g[0], gy: g[1], gz: g[2] } };
+    }
+    const a = numeros(texto.slice(2), 3);
+    return a ? { tipo: 'acel', x: a[0], y: a[1], z: a[2] } : null;
+  }
+
+  if (texto.startsWith('G:')) {
+    const g = numeros(texto.slice(2), 3);
+    return g ? { tipo: 'giro', x: g[0], y: g[1], z: g[2] } : null;
   }
 
   return null;
+}
+
+/**
+ * Decide se um golpe com `seq` deve ser contado, dado o último aceito.
+ * seq vai de 1 a 9999 e volta a 1; uma distância "para trás" é tratada como duplicata/atraso.
+ * `ultimo` deve ser zerado (null) a cada nova conexão, porque a placa zera o seq no boot.
+ */
+export function avaliarSeq(ultimo: number | null, seq: number): { aceitar: boolean; lacuna: number } {
+  if (ultimo === null) return { aceitar: true, lacuna: 0 };
+  const distancia = (((seq - ultimo) % SEQ_MAX) + SEQ_MAX) % SEQ_MAX;
+  if (distancia === 0 || distancia >= SEQ_MAX / 2) return { aceitar: false, lacuna: 0 };
+  return { aceitar: true, lacuna: distancia - 1 };
 }
 
 // A biblioteca BLE troca valores em base64; o protocolo é só ASCII.
@@ -75,7 +120,7 @@ export function base64ParaTexto(b64: string): string {
     if (c === '=') break;
     const v = B64.indexOf(c);
     if (v < 0) continue;
-    acumulado = (acumulado << 6) | v;
+    acumulado = ((acumulado << 6) | v) & 0xffffff;
     bits += 6;
     if (bits >= 8) {
       bits -= 8;
