@@ -1,0 +1,33 @@
+# Blueprint do Render para a API (SRC/backend). Segredos marcados com sync:false são
+# preenchidos no painel do Render, nunca neste arquivo.
+services:
+  - type: web
+    name: tennis-analytics-api
+    runtime: docker
+    rootDir: SRC/backend
+    dockerfilePath: ./Dockerfile
+    plan: free
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: TRUST_PROXY
+        value: "true"
+      - key: DATABASE_URL
+        sync: false
+      - key: DIRECT_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: CORS_ORIGINS
+        sync: false
+      # Sem a plataforma mãe real, a demonstração usa o mock embutido:
+      # https://<servico>.onrender.com/api/v1/mock/plataforma-mae
+      - key: PLATAFORMA_MAE_URL
+        sync: false
+      - key: PLATAFORMA_MAE_API_KEY
+        generateValue: true
+      - key: MOCK_PLATAFORMA_MAE
+        value: "true"
+      - key: METRICS_TOKEN
+        generateValue: true

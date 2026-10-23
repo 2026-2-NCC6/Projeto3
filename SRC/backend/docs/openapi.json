@@ -1,0 +1,2859 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/api/v1/health": {
+      "get": {
+        "operationId": "SaudeController_saude",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Usado pelo host (Render/Docker) para saber se a instância está saudável.",
+        "tags": [
+          "Operação"
+        ]
+      }
+    },
+    "/api/v1/metrics": {
+      "get": {
+        "operationId": "SaudeController_metricasPrometheus",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Métricas Prometheus. Exige `Authorization: Bearer <METRICS_TOKEN>`.",
+        "tags": [
+          "Operação"
+        ]
+      }
+    },
+    "/api/v1/auth/cadastro": {
+      "post": {
+        "operationId": "AuthController_cadastrar",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CadastroDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Cria a conta (adulto) e o praticante titular.",
+        "tags": [
+          "Autenticação"
+        ]
+      }
+    },
+    "/api/v1/auth/login": {
+      "post": {
+        "operationId": "AuthController_login",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Autenticação"
+        ]
+      }
+    },
+    "/api/v1/auth/refresh": {
+      "post": {
+        "operationId": "AuthController_refresh",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Troca o refresh token por um novo par. Cada refresh só pode ser usado uma vez.",
+        "tags": [
+          "Autenticação"
+        ]
+      }
+    },
+    "/api/v1/auth/logout": {
+      "post": {
+        "operationId": "AuthController_logout",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Autenticação"
+        ]
+      }
+    },
+    "/api/v1/me": {
+      "get": {
+        "operationId": "ContaController_eu",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "Conta"
+        ]
+      },
+      "delete": {
+        "operationId": "ContaController_excluir",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExcluirContaDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Eliminação (LGPD): apaga praticantes, sessões e dispositivos e anonimiza a conta.",
+        "tags": [
+          "Conta"
+        ]
+      }
+    },
+    "/api/v1/me/exportar": {
+      "get": {
+        "operationId": "ContaController_exportar",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Portabilidade (LGPD): todos os dados da conta em JSON.",
+        "tags": [
+          "Conta"
+        ]
+      }
+    },
+    "/api/v1/praticantes": {
+      "get": {
+        "operationId": "PraticantesController_listar",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Titular e dependentes da conta logada (RF02).",
+        "tags": [
+          "Praticantes e histórico"
+        ]
+      }
+    },
+    "/api/v1/praticantes/dependentes": {
+      "post": {
+        "operationId": "PraticantesController_criarDependente",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DependenteDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Perfil de menor gerido pelo responsável (RF11).",
+        "tags": [
+          "Praticantes e histórico"
+        ]
+      }
+    },
+    "/api/v1/praticantes/{id}": {
+      "patch": {
+        "operationId": "PraticantesController_atualizar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AtualizarPraticanteDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "Praticantes e histórico"
+        ]
+      },
+      "delete": {
+        "operationId": "PraticantesController_remover",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "Praticantes e histórico"
+        ]
+      }
+    },
+    "/api/v1/praticantes/{id}/sessoes": {
+      "get": {
+        "operationId": "PraticantesController_sessoes",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "de",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "name": "ate",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "name": "treino",
+            "required": false,
+            "in": "query",
+            "description": "slug do treino",
+            "schema": {
+              "maxLength": 80,
+              "type": "string"
+            }
+          },
+          {
+            "name": "pagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limite",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "RF13: sessões por período e treino.",
+        "tags": [
+          "Praticantes e histórico"
+        ]
+      }
+    },
+    "/api/v1/praticantes/{id}/indicadores": {
+      "get": {
+        "operationId": "PraticantesController_indicadores",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "de",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "name": "ate",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "name": "treino",
+            "required": false,
+            "in": "query",
+            "description": "slug do treino",
+            "schema": {
+              "maxLength": 80,
+              "type": "string"
+            }
+          },
+          {
+            "name": "pagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limite",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "RF13: precisão, consistência, cadência, volume, tempo e progressão.",
+        "tags": [
+          "Praticantes e histórico"
+        ]
+      }
+    },
+    "/api/v1/treinos": {
+      "get": {
+        "operationId": "TreinosController_catalogo",
+        "parameters": [
+          {
+            "name": "publico",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "maxLength": 60,
+              "type": "string"
+            }
+          },
+          {
+            "name": "objetivo",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "maxLength": 60,
+              "type": "string"
+            }
+          },
+          {
+            "name": "nivel",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "INICIANTE",
+                "INTERMEDIARIO",
+                "AVANCADO"
+              ]
+            }
+          },
+          {
+            "name": "duracaoMax",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sensor",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "IMU",
+                "PIEZO"
+              ]
+            }
+          },
+          {
+            "name": "modoPublico",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "INFANTIL",
+                "ADULTO",
+                "TODOS"
+              ]
+            }
+          },
+          {
+            "name": "categoria",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "RF03: catálogo de treinos publicados, com filtros.",
+        "tags": [
+          "Treinos"
+        ]
+      },
+      "post": {
+        "operationId": "TreinosController_criar",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CriarTreinoDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "Treinos"
+        ]
+      }
+    },
+    "/api/v1/categorias": {
+      "get": {
+        "operationId": "TreinosController_categorias",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "Treinos"
+        ]
+      }
+    },
+    "/api/v1/treinos/{slug}": {
+      "get": {
+        "operationId": "TreinosController_publicada",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "RF04/RF18/RF21: versão publicada completa. Responde 304 se o app já tem esta versão\nsincronizada (If-None-Match), o que permite cachear o treino para uso offline.",
+        "tags": [
+          "Treinos"
+        ]
+      }
+    },
+    "/api/v1/treinos/{slug}/versoes": {
+      "get": {
+        "operationId": "TreinosController_versoes",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "RF16: histórico de versões.",
+        "tags": [
+          "Treinos"
+        ]
+      },
+      "post": {
+        "operationId": "TreinosController_novaVersao",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "Treinos"
+        ]
+      }
+    },
+    "/api/v1/treinos/{slug}/versoes/{numero}": {
+      "get": {
+        "operationId": "TreinosController_versao",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "numero",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "Treinos"
+        ]
+      },
+      "patch": {
+        "operationId": "TreinosController_editar",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "numero",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EditarVersaoDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "Treinos"
+        ]
+      }
+    },
+    "/api/v1/treinos/{slug}/versoes/{numero}/validar": {
+      "post": {
+        "operationId": "TreinosController_validar",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "numero",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "RF15: valida regras e limites de operação.",
+        "tags": [
+          "Treinos"
+        ]
+      }
+    },
+    "/api/v1/treinos/{slug}/versoes/{numero}/ensaiar": {
+      "post": {
+        "operationId": "TreinosController_ensaiar",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "numero",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "RF15: simula a sequência da máquina e a pontuação antes de publicar.",
+        "tags": [
+          "Treinos"
+        ]
+      }
+    },
+    "/api/v1/treinos/{slug}/versoes/{numero}/enviar-revisao": {
+      "post": {
+        "operationId": "TreinosController_enviarParaRevisao",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "numero",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "Treinos"
+        ]
+      }
+    },
+    "/api/v1/treinos/{slug}/versoes/{numero}/devolver": {
+      "post": {
+        "operationId": "TreinosController_devolver",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "numero",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "Treinos"
+        ]
+      }
+    },
+    "/api/v1/treinos/{slug}/versoes/{numero}/publicar": {
+      "post": {
+        "operationId": "TreinosController_publicar",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "numero",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "Treinos"
+        ]
+      }
+    },
+    "/api/v1/treinos/{slug}/marketplace": {
+      "put": {
+        "operationId": "TreinosController_marketplace",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MarketplaceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "RF20: metadados de marketplace (sem cobrança no MVP).",
+        "tags": [
+          "Treinos"
+        ]
+      }
+    },
+    "/api/v1/treinos/{slug}/estatisticas": {
+      "get": {
+        "operationId": "TreinosController_estatisticas",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Estatísticas agregadas e anônimas para o autor.",
+        "tags": [
+          "Treinos"
+        ]
+      }
+    },
+    "/api/v1/dispositivos": {
+      "get": {
+        "operationId": "DispositivosController_listar",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "Dispositivos"
+        ]
+      },
+      "post": {
+        "operationId": "DispositivosController_registrar",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegistrarDispositivoDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Vincula a raquete à conta. Uma raquete pertence a uma única conta.",
+        "tags": [
+          "Dispositivos"
+        ]
+      }
+    },
+    "/api/v1/dispositivos/{id}/status": {
+      "put": {
+        "operationId": "DispositivosController_status",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StatusDispositivoDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "Dispositivos"
+        ]
+      }
+    },
+    "/api/v1/dispositivos/{id}": {
+      "delete": {
+        "operationId": "DispositivosController_remover",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "Dispositivos"
+        ]
+      }
+    },
+    "/api/v1/sessoes": {
+      "post": {
+        "operationId": "SessoesController_criar",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CriarSessaoDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Cria a sessão (estado CRIADA). Idempotente pelo id gerado no app.",
+        "tags": [
+          "Sessões"
+        ]
+      }
+    },
+    "/api/v1/sessoes/sincronizar": {
+      "post": {
+        "operationId": "SessoesController_sincronizar",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SincronizarDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "RF21: sessão feita offline, enviada completa quando a conexão volta.",
+        "tags": [
+          "Sessões"
+        ]
+      }
+    },
+    "/api/v1/sessoes/{id}": {
+      "get": {
+        "operationId": "SessoesController_obter",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "Sessões"
+        ]
+      }
+    },
+    "/api/v1/sessoes/{id}/comandos": {
+      "post": {
+        "operationId": "SessoesController_comando",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ComandoDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "RF06/RF09/RF22: INICIAR, PAUSAR, RETOMAR, ENCERRAR, EMERGENCIA, REINICIAR.\nEm PARADA_SEGURA, só REINICIAR (com areaSegura=true) é aceito.",
+        "tags": [
+          "Sessões"
+        ]
+      }
+    },
+    "/api/v1/sessoes/{id}/eventos": {
+      "post": {
+        "operationId": "SessoesController_eventos",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoteEventosDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "RF07: lote de eventos do sensor (até 200). Duplicatas são ignoradas pelo id.",
+        "tags": [
+          "Sessões"
+        ]
+      }
+    },
+    "/api/v1/admin/usuarios": {
+      "get": {
+        "operationId": "AdminController_usuarios",
+        "parameters": [
+          {
+            "name": "busca",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "maxLength": 80,
+              "type": "string"
+            }
+          },
+          {
+            "name": "pagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limite",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 200,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "Administração"
+        ]
+      }
+    },
+    "/api/v1/admin/usuarios/{id}": {
+      "patch": {
+        "operationId": "AdminController_atualizarUsuario",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AtualizarUsuarioDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Promove/rebaixa papéis (jogador, autor, admin) e ativa/desativa contas.",
+        "tags": [
+          "Administração"
+        ]
+      }
+    },
+    "/api/v1/admin/categorias": {
+      "post": {
+        "operationId": "AdminController_criarCategoria",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CategoriaDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "Administração"
+        ]
+      }
+    },
+    "/api/v1/admin/categorias/{id}": {
+      "put": {
+        "operationId": "AdminController_atualizarCategoria",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CategoriaDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "Administração"
+        ]
+      },
+      "delete": {
+        "operationId": "AdminController_removerCategoria",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "Administração"
+        ]
+      }
+    },
+    "/api/v1/admin/dispositivos": {
+      "get": {
+        "operationId": "AdminController_dispositivos",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "Administração"
+        ]
+      }
+    },
+    "/api/v1/admin/dispositivos/{id}/bloqueio": {
+      "post": {
+        "operationId": "AdminController_bloquear",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BloqueioDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "Administração"
+        ]
+      }
+    },
+    "/api/v1/admin/parametros": {
+      "get": {
+        "operationId": "AdminController_listarParametros",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Limites de operação da máquina e prazos de retenção (LGPD).",
+        "tags": [
+          "Administração"
+        ]
+      }
+    },
+    "/api/v1/admin/parametros/{chave}": {
+      "put": {
+        "operationId": "AdminController_definirParametro",
+        "parameters": [
+          {
+            "name": "chave",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ParametroDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "Administração"
+        ]
+      }
+    },
+    "/api/v1/admin/sessoes": {
+      "get": {
+        "operationId": "AdminController_sessoes",
+        "parameters": [
+          {
+            "name": "estado",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "CRIADA",
+                "EM_EXECUCAO",
+                "PAUSADA",
+                "ENCERRADA",
+                "PARADA_SEGURA"
+              ]
+            }
+          },
+          {
+            "name": "pagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limite",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 200,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "Administração"
+        ]
+      }
+    },
+    "/api/v1/admin/auditoria": {
+      "get": {
+        "operationId": "AdminController_auditoriaLista",
+        "parameters": [
+          {
+            "name": "acao",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "pattern": "^[A-Z_]{2,60}$",
+              "type": "string"
+            }
+          },
+          {
+            "name": "severidade",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "INFO",
+                "INCIDENTE"
+              ]
+            }
+          },
+          {
+            "name": "de",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "name": "ate",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "name": "pagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limite",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 200,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "RF23: trilha de auditoria. Filtre por severidade=INCIDENTE para os eventos de segurança.",
+        "tags": [
+          "Administração"
+        ]
+      }
+    },
+    "/api/v1/admin/integracao/envios": {
+      "get": {
+        "operationId": "AdminController_envios",
+        "parameters": [
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "PENDENTE",
+                "ENVIADO",
+                "FALHOU"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "Administração"
+        ]
+      }
+    },
+    "/api/v1/admin/integracao/envios/{id}/reprocessar": {
+      "post": {
+        "operationId": "AdminController_reprocessar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "Administração"
+        ]
+      }
+    },
+    "/api/v1/admin/integracao/processar": {
+      "post": {
+        "operationId": "AdminController_processar",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Força um ciclo de envio à plataforma mãe (normalmente roda a cada 30 s).",
+        "tags": [
+          "Administração"
+        ]
+      }
+    },
+    "/api/v1/admin/integracao/importar-treinos": {
+      "post": {
+        "operationId": "AdminController_importar",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "Administração"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "Tennis Analytics API",
+    "description": "API do Smart Tennis Arena (PI 6º CCOMP FECAP 2026). Autentique em /auth/login e use o accessToken como Bearer. Erros seguem { statusCode, codigo, mensagem, detalhes?, requestId }. Tempo real do simulador: Socket.IO no namespace /maquina (handshake auth.token; evento \"entrar\" {sessaoId}; eventos recebidos: lancamento, estado, parada).",
+    "version": "1.0",
+    "contact": {}
+  },
+  "tags": [],
+  "servers": [],
+  "components": {
+    "securitySchemes": {
+      "bearer": {
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "type": "http"
+      }
+    },
+    "schemas": {
+      "CadastroDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "maxLength": 254,
+            "format": "email"
+          },
+          "senha": {
+            "type": "string",
+            "description": "8–72 caracteres (limite do bcrypt), com ao menos uma letra e um número.",
+            "minLength": 8,
+            "maxLength": 72,
+            "pattern": "^(?=.*[A-Za-z])(?=.*\\d)"
+          },
+          "nome": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 80
+          },
+          "declaraMaioridade": {
+            "type": "boolean",
+            "description": "Só adultos têm conta; menores entram como dependentes de um responsável (RF11, LGPD art. 14)."
+          },
+          "termosVersao": {
+            "type": "string",
+            "description": "Versão dos termos de uso e da política de privacidade aceita (finalidade explícita, LGPD).",
+            "minLength": 1,
+            "maxLength": 20
+          },
+          "faixaEtaria": {
+            "type": "string",
+            "enum": [
+              "DE_18_A_29",
+              "DE_30_A_44",
+              "DE_45_A_59",
+              "DE_60_MAIS"
+            ]
+          },
+          "nivel": {
+            "type": "string",
+            "enum": [
+              "INICIANTE",
+              "INTERMEDIARIO",
+              "AVANCADO"
+            ]
+          }
+        },
+        "required": [
+          "email",
+          "senha",
+          "nome",
+          "declaraMaioridade",
+          "termosVersao",
+          "faixaEtaria"
+        ]
+      },
+      "LoginDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "maxLength": 254,
+            "format": "email"
+          },
+          "senha": {
+            "type": "string",
+            "maxLength": 72
+          }
+        },
+        "required": [
+          "email",
+          "senha"
+        ]
+      },
+      "RefreshDto": {
+        "type": "object",
+        "properties": {
+          "refreshToken": {
+            "type": "string",
+            "minLength": 20,
+            "maxLength": 200
+          }
+        },
+        "required": [
+          "refreshToken"
+        ]
+      },
+      "ExcluirContaDto": {
+        "type": "object",
+        "properties": {
+          "senha": {
+            "type": "string",
+            "description": "Confirmação da senha antes de uma ação irreversível.",
+            "maxLength": 72
+          }
+        },
+        "required": [
+          "senha"
+        ]
+      },
+      "DependenteDto": {
+        "type": "object",
+        "properties": {
+          "apelido": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 30
+          },
+          "faixaEtaria": {
+            "type": "string",
+            "enum": [
+              "ATE_9",
+              "DE_10_A_13",
+              "DE_14_A_17"
+            ]
+          },
+          "nivel": {
+            "type": "string",
+            "enum": [
+              "INICIANTE",
+              "INTERMEDIARIO",
+              "AVANCADO"
+            ]
+          },
+          "consentimentoParental": {
+            "type": "boolean",
+            "description": "O responsável declara consentir com o tratamento dos dados do menor (LGPD art. 14)."
+          },
+          "consenteTelemetria": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "apelido",
+          "faixaEtaria",
+          "consentimentoParental"
+        ]
+      },
+      "AtualizarPraticanteDto": {
+        "type": "object",
+        "properties": {
+          "apelido": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 30
+          },
+          "faixaEtaria": {
+            "type": "string",
+            "enum": [
+              "ATE_9",
+              "DE_10_A_13",
+              "DE_14_A_17",
+              "DE_18_A_29",
+              "DE_30_A_44",
+              "DE_45_A_59",
+              "DE_60_MAIS"
+            ]
+          },
+          "nivel": {
+            "type": "string",
+            "enum": [
+              "INICIANTE",
+              "INTERMEDIARIO",
+              "AVANCADO"
+            ]
+          },
+          "objetivos": {
+            "maxItems": 10,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 60
+            }
+          },
+          "preferencias": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "restricoes": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "consenteTelemetria": {
+            "type": "boolean",
+            "description": "Autoriza enviar os eventos brutos da sessão à plataforma mãe (RF19 \"quando autorizado\")."
+          }
+        }
+      },
+      "PontuacaoDto": {
+        "type": "object",
+        "properties": {
+          "base": {
+            "type": "number"
+          },
+          "bonusSequencia": {
+            "type": "number"
+          },
+          "bonusForte": {
+            "type": "number"
+          },
+          "penalidadeErro": {
+            "type": "number"
+          },
+          "metaPrecisao": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "base",
+          "bonusSequencia",
+          "bonusForte",
+          "penalidadeErro",
+          "metaPrecisao"
+        ]
+      },
+      "LancamentoDto": {
+        "type": "object",
+        "properties": {
+          "velocidadeKmh": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 250
+          },
+          "rotacao": {
+            "type": "string",
+            "enum": [
+              "TOPSPIN",
+              "SLICE",
+              "PLANO"
+            ]
+          },
+          "direcao": {
+            "type": "string",
+            "enum": [
+              "ESQ",
+              "CENTRO",
+              "DIR"
+            ]
+          },
+          "alturaM": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 10
+          },
+          "intervaloSeg": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 120
+          }
+        },
+        "required": [
+          "velocidadeKmh",
+          "rotacao",
+          "direcao",
+          "alturaM",
+          "intervaloSeg"
+        ]
+      },
+      "ExercicioDto": {
+        "type": "object",
+        "properties": {
+          "nome": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "repeticoes": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 500
+          },
+          "golpeEsperado": {
+            "type": "string",
+            "enum": [
+              "FH",
+              "BH",
+              "ALTERNADO"
+            ]
+          },
+          "lancamento": {
+            "$ref": "#/components/schemas/LancamentoDto"
+          }
+        },
+        "required": [
+          "nome",
+          "repeticoes",
+          "golpeEsperado",
+          "lancamento"
+        ]
+      },
+      "FeedbacksDto": {
+        "type": "object",
+        "properties": {
+          "acerto": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "erro": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "sequencia": {
+            "type": "string",
+            "maxLength": 120
+          }
+        },
+        "required": [
+          "acerto",
+          "erro",
+          "sequencia"
+        ]
+      },
+      "ConclusaoDto": {
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "TEMPO",
+              "REPETICOES"
+            ]
+          },
+          "valor": {
+            "type": "number",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "tipo",
+          "valor"
+        ]
+      },
+      "GolpeTutorialDto": {
+        "type": "object",
+        "properties": {
+          "lado": {
+            "type": "string",
+            "enum": [
+              "FH",
+              "BH"
+            ]
+          },
+          "alvo": {
+            "type": "string",
+            "maxLength": 30
+          },
+          "arco": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          }
+        },
+        "required": [
+          "lado",
+          "alvo",
+          "arco"
+        ]
+      },
+      "TutorialDto": {
+        "type": "object",
+        "properties": {
+          "golpes": {
+            "maxItems": 20,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GolpeTutorialDto"
+            }
+          },
+          "segPorBola": {
+            "type": "number",
+            "minimum": 0.1,
+            "maximum": 30
+          },
+          "passos": {
+            "maxItems": 20,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 300
+            }
+          }
+        },
+        "required": [
+          "golpes",
+          "segPorBola",
+          "passos"
+        ]
+      },
+      "ConteudoDto": {
+        "type": "object",
+        "properties": {
+          "publicoAlvo": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "objetivo": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "nivel": {
+            "type": "string",
+            "enum": [
+              "INICIANTE",
+              "INTERMEDIARIO",
+              "AVANCADO"
+            ]
+          },
+          "duracaoMin": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 240
+          },
+          "modoPublico": {
+            "type": "string",
+            "enum": [
+              "INFANTIL",
+              "ADULTO",
+              "TODOS"
+            ]
+          },
+          "instrucoes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "equipamentos": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "riscos": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "sensores": {
+            "type": "array",
+            "maxItems": 4,
+            "items": {
+              "type": "string",
+              "enum": [
+                "IMU",
+                "PIEZO"
+              ]
+            }
+          },
+          "pontuacao": {
+            "$ref": "#/components/schemas/PontuacaoDto"
+          },
+          "exercicios": {
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExercicioDto"
+            }
+          },
+          "feedbacks": {
+            "$ref": "#/components/schemas/FeedbacksDto"
+          },
+          "conclusao": {
+            "$ref": "#/components/schemas/ConclusaoDto"
+          },
+          "tutorial": {
+            "$ref": "#/components/schemas/TutorialDto"
+          }
+        },
+        "required": [
+          "publicoAlvo",
+          "objetivo",
+          "nivel",
+          "duracaoMin",
+          "modoPublico",
+          "instrucoes",
+          "equipamentos",
+          "riscos",
+          "sensores",
+          "pontuacao",
+          "exercicios",
+          "feedbacks",
+          "conclusao"
+        ]
+      },
+      "CriarTreinoDto": {
+        "type": "object",
+        "properties": {
+          "slug": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 80
+          },
+          "nome": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 120
+          },
+          "categoriaSlug": {
+            "type": "string"
+          },
+          "conteudo": {
+            "$ref": "#/components/schemas/ConteudoDto"
+          },
+          "notasAlteracao": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "compatibilidadeFirmware": {
+            "type": "string",
+            "description": "Versão mínima do firmware da raquete para executar o treino."
+          }
+        },
+        "required": [
+          "slug",
+          "nome",
+          "conteudo"
+        ]
+      },
+      "EditarVersaoDto": {
+        "type": "object",
+        "properties": {
+          "conteudo": {
+            "$ref": "#/components/schemas/ConteudoDto"
+          },
+          "notasAlteracao": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "compatibilidadeFirmware": {
+            "type": "string"
+          }
+        }
+      },
+      "MarketplaceDto": {
+        "type": "object",
+        "properties": {
+          "descricaoComercial": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 1000
+          },
+          "licenca": {
+            "type": "string",
+            "enum": [
+              "CC_BY",
+              "PROPRIETARIA",
+              "USO_PESSOAL"
+            ]
+          },
+          "modeloRemuneracao": {
+            "type": "string",
+            "enum": [
+              "GRATUITO",
+              "AVULSO",
+              "ASSINATURA"
+            ]
+          },
+          "precoFuturoCentavos": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 10000000
+          }
+        },
+        "required": [
+          "descricaoComercial",
+          "licenca",
+          "modeloRemuneracao"
+        ]
+      },
+      "RegistrarDispositivoDto": {
+        "type": "object",
+        "properties": {
+          "nomeBle": {
+            "type": "string",
+            "description": "Nome anunciado via BLE (ex.: ArduinoR4-IMU).",
+            "minLength": 1,
+            "maxLength": 40
+          },
+          "identificador": {
+            "type": "string",
+            "description": "Endereço BLE ou número de série: identifica a raquete de forma única.",
+            "minLength": 4,
+            "maxLength": 64
+          },
+          "firmwareVersao": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "nomeBle",
+          "identificador",
+          "firmwareVersao"
+        ]
+      },
+      "SensoresDto": {
+        "type": "object",
+        "properties": {
+          "imu": {
+            "type": "string",
+            "enum": [
+              "OK",
+              "FALHA",
+              "AUSENTE"
+            ]
+          },
+          "piezo": {
+            "type": "string",
+            "enum": [
+              "OK",
+              "FALHA",
+              "AUSENTE"
+            ]
+          }
+        },
+        "required": [
+          "imu"
+        ]
+      },
+      "StatusDispositivoDto": {
+        "type": "object",
+        "properties": {
+          "conectado": {
+            "type": "boolean"
+          },
+          "sensores": {
+            "$ref": "#/components/schemas/SensoresDto"
+          },
+          "bateriaPct": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "rssi": {
+            "type": "number",
+            "minimum": -127,
+            "maximum": 20
+          },
+          "firmwareVersao": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "conectado",
+          "sensores"
+        ]
+      },
+      "CriarSessaoDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "UUID gerado pelo app: permite repetir a requisição (ou criar offline) sem duplicar a sessão.",
+            "format": "uuid"
+          },
+          "praticanteId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "treinoSlug": {
+            "type": "string",
+            "maxLength": 80
+          },
+          "versaoNumero": {
+            "type": "number",
+            "description": "Omitido: usa a versão publicada atual.",
+            "minimum": 1
+          },
+          "dispositivoId": {
+            "type": "string",
+            "description": "Obrigatório quando a origem é SENSOR.",
+            "format": "uuid"
+          },
+          "origem": {
+            "type": "string",
+            "enum": [
+              "SENSOR",
+              "DEMO"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "praticanteId",
+          "treinoSlug",
+          "origem"
+        ]
+      },
+      "SessaoOfflineDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "praticanteId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "treinoSlug": {
+            "type": "string",
+            "maxLength": 80
+          },
+          "versaoNumero": {
+            "type": "number",
+            "description": "Versão que o app tinha sincronizado (pode ter sido arquivada depois).",
+            "minimum": 1
+          },
+          "dispositivoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "origem": {
+            "type": "string",
+            "enum": [
+              "SENSOR",
+              "DEMO"
+            ]
+          },
+          "iniciadaEm": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "encerradaEm": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "motivoInterrupcao": {
+            "type": "string",
+            "description": "Preenchido se a sessão terminou por parada de emergência ou falha no app.",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "pontosCliente": {
+            "type": "number",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "id",
+          "praticanteId",
+          "treinoSlug",
+          "versaoNumero",
+          "origem",
+          "iniciadaEm",
+          "encerradaEm"
+        ]
+      },
+      "EventoDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "UUID gerado pelo app: chave de idempotência do evento.",
+            "format": "uuid"
+          },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "GOLPE",
+              "ERRO",
+              "ESTADO"
+            ]
+          },
+          "tMs": {
+            "type": "number",
+            "description": "Milissegundos desde o início da sessão.",
+            "minimum": 0,
+            "maximum": 86400000
+          },
+          "ocorridoEm": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "dados": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Validado conforme o tipo (DadosGolpeDto, DadosErroDto, DadosEstadoDto)."
+          }
+        },
+        "required": [
+          "id",
+          "tipo",
+          "tMs",
+          "ocorridoEm",
+          "dados"
+        ]
+      },
+      "SincronizarDto": {
+        "type": "object",
+        "properties": {
+          "sessao": {
+            "$ref": "#/components/schemas/SessaoOfflineDto"
+          },
+          "eventos": {
+            "maxItems": 5000,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EventoDto"
+            }
+          }
+        },
+        "required": [
+          "sessao",
+          "eventos"
+        ]
+      },
+      "ComandoDto": {
+        "type": "object",
+        "properties": {
+          "comando": {
+            "type": "string",
+            "enum": [
+              "INICIAR",
+              "PAUSAR",
+              "RETOMAR",
+              "ENCERRAR",
+              "EMERGENCIA",
+              "REINICIAR"
+            ]
+          },
+          "motivo": {
+            "type": "string",
+            "description": "Obrigatório na EMERGENCIA; vai para o registro da interrupção (RF22).",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "areaSegura": {
+            "type": "boolean",
+            "description": "Obrigatório no REINICIAR: o praticante confirma que a área está segura."
+          },
+          "pontosCliente": {
+            "type": "number",
+            "description": "Pontuação calculada pelo app, para detectar divergência no ENCERRAR.",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "comando"
+        ]
+      },
+      "LoteEventosDto": {
+        "type": "object",
+        "properties": {
+          "eventos": {
+            "minItems": 1,
+            "maxItems": 200,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EventoDto"
+            }
+          }
+        },
+        "required": [
+          "eventos"
+        ]
+      },
+      "AtualizarUsuarioDto": {
+        "type": "object",
+        "properties": {
+          "papel": {
+            "type": "string",
+            "enum": [
+              "JOGADOR",
+              "AUTOR",
+              "ADMIN"
+            ]
+          },
+          "ativo": {
+            "type": "boolean"
+          }
+        }
+      },
+      "CategoriaDto": {
+        "type": "object",
+        "properties": {
+          "nome": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 60
+          },
+          "slug": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 60,
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+          }
+        },
+        "required": [
+          "nome",
+          "slug"
+        ]
+      },
+      "BloqueioDto": {
+        "type": "object",
+        "properties": {
+          "bloqueado": {
+            "type": "boolean"
+          },
+          "motivo": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 200
+          }
+        },
+        "required": [
+          "bloqueado",
+          "motivo"
+        ]
+      },
+      "ParametroDto": {
+        "type": "object",
+        "properties": {
+          "valor": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "valor"
+        ]
+      }
+    }
+  }
+}
