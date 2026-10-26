@@ -666,6 +666,26 @@
         ]
       }
     },
+    "/api/v1/autoria/treinos": {
+      "get": {
+        "operationId": "TreinosController_daAutoria",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "RF14/RF16: treinos do autor em qualquer status (admin vê todos), para o painel de autoria do site.",
+        "tags": [
+          "Treinos"
+        ]
+      }
+    },
     "/api/v1/treinos/{slug}/versoes": {
       "get": {
         "operationId": "TreinosController_versoes",

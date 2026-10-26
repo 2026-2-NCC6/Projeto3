@@ -5,7 +5,7 @@ Fonte de requisitos: `RequisitosProjetoSemestralCCOMP6.pdf` (Versão FINAL). Tod
 
 ## 1. Contexto e escopo
 
-O ecossistema tem quatro partes: app mobile (Expo, `SRC/app`), site de autoria/admin (a construir), API (este documento) e raquete instrumentada (`SRC/arduino`). A raquete fala com o app por **BLE**; o backend recebe dados **do app**, não da placa (mudança em relação à NI1, que previa Wi-Fi).
+O ecossistema tem quatro partes: app mobile (Expo, `SRC/app`), site de autoria/admin (React + Vite, `SRC/site`), API (este documento) e raquete instrumentada (`SRC/arduino`). A raquete fala com o app por **BLE**; o backend recebe dados **do app**, não da placa (mudança em relação à NI1, que previa Wi-Fi).
 
 **No escopo:** API REST + WebSocket que atende o lado servidor de RF01–RF23, simulador da máquina lançadora, mock da plataforma mãe, banco, testes, CI e artefatos de deploy.
 
@@ -193,7 +193,7 @@ INICIAR com `dispositivoId` exige: dispositivo da mesma conta, não bloqueado, f
 | Auth | `POST auth/cadastro`, `POST auth/login`, `POST auth/refresh`, `POST auth/logout`, `GET me`, `GET me/exportar`, `DELETE me` |
 | Praticantes | `GET praticantes`, `PATCH praticantes/:id`, `POST praticantes/dependentes`, `DELETE praticantes/:id` |
 | Catálogo | `GET treinos` (filtros: `publico`, `objetivo`, `nivel`, `duracaoMax`, `sensor`, `modoPublico`, `categoria`), `GET treinos/:slug` (ETag) |
-| Autoria | `POST treinos`, `GET treinos/:slug/versoes`, `GET treinos/:slug/versoes/:n`, `POST treinos/:slug/versoes`, `PATCH treinos/:slug/versoes/:n`, `POST …/:n/validar`, `POST …/:n/ensaiar`, `POST …/:n/enviar-revisao`, `POST …/:n/devolver`, `POST …/:n/publicar`, `PUT treinos/:slug/marketplace`, `GET treinos/:slug/estatisticas` |
+| Autoria | `GET autoria/treinos` (treinos do autor em qualquer status; admin vê todos), `POST treinos`, `GET treinos/:slug/versoes`, `GET treinos/:slug/versoes/:n`, `POST treinos/:slug/versoes`, `PATCH treinos/:slug/versoes/:n`, `POST …/:n/validar`, `POST …/:n/ensaiar`, `POST …/:n/enviar-revisao`, `POST …/:n/devolver`, `POST …/:n/publicar`, `PUT treinos/:slug/marketplace`, `GET treinos/:slug/estatisticas` |
 | Dispositivos | `POST dispositivos`, `GET dispositivos`, `PUT dispositivos/:id/status`, `DELETE dispositivos/:id` |
 | Sessões | `POST sessoes`, `GET sessoes/:id`, `POST sessoes/:id/comandos`, `POST sessoes/:id/eventos`, `POST sessoes/sincronizar` |
 | Histórico | `GET praticantes/:id/sessoes?de&ate&treino`, `GET praticantes/:id/indicadores?de&ate&treino` |
@@ -208,7 +208,7 @@ Erros no formato `{ statusCode, codigo, mensagem, requestId }`.
 
 ## 7. Segurança
 
-OWASP Top 10: A01 guard que nega por padrão + checagem de posse; A02 TLS no deploy, `sslmode=require`, bcrypt, segredos em env; A03 Prisma parametrizado + DTO estrito; A04 máquina de estados e limites; A05 Helmet, CORS restrito, sem stack trace em produção; A06 `npm audit --audit-level=high` no CI; A07 rate limit + rotação/reuso de refresh; A08 versões imutáveis + idempotência; A09 auditoria + logs mascarados; A10 URL externa só do ambiente.
+OWASP Top 10: A01 guard que nega por padrão + checagem de posse; A02 TLS no deploy, `sslmode=require`, bcrypt, segredos em env; A03 Prisma parametrizado + DTO estrito; A04 máquina de estados e limites; A05 Helmet, CORS restrito, sem stack trace em produção, `Cache-Control: no-store` por padrão (só `GET treinos/:slug` é revalidável por ETag); A06 `npm audit --audit-level=high` no CI; A07 rate limit + rotação/reuso de refresh; A08 versões imutáveis + idempotência; A09 auditoria + logs mascarados; A10 URL externa só do ambiente.
 
 ## 8. Testes, CI e deploy
 
@@ -263,7 +263,7 @@ OWASP Top 10: A01 guard que nega por padrão + checagem de posse; A02 TLS no dep
 1. BLE autenticado por desafio e resposta (HMAC-SHA256) desde o firmware 1.1.0; a chave de cada raquete fica cifrada na API (AES-256-GCM) e só é entregue ao dono. Residuais: as métricas de golpe trafegam legíveis (sem dado pessoal), o desafio da placa não vem de gerador criptográfico por hardware, e a porta serial não autentica (exige acesso físico).
 2. Modo offline executa sem simulador da máquina.
 3. Simulador em instância única; escalar exige mover o estado em memória para armazenamento compartilhado.
-4. App e site ainda não consomem a API.
+4. O app e o site consomem a API. O cadastro de conta existe só no app, porque exige declarar maioridade.
 5. Os papéis `tennis_owner` e `tennis_api` são criados uma vez por `prisma/sql/papeis.sql` (fora das migrations, porque envolvem senhas); as senhas ficam só no ambiente.
 6. Um access token continua válido por até 15 min após a desativação da conta (o refresh é revogado na hora).
 7. O pseudônimo do praticante enviado à plataforma mãe deriva do `JWT_SECRET`; trocar o segredo muda os pseudônimos.

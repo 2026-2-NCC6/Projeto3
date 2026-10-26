@@ -80,6 +80,28 @@ export class TreinosService {
     return { etag: `"${versao.id}"`, corpo: await this.detalhe(treino, versao) };
   }
 
+  /** RF14/RF16: painel de autoria do site. O autor vê os próprios treinos em qualquer status; o admin vê todos. */
+  async daAutoria(usuario: UsuarioAutenticado) {
+    const treinos = await this.prisma.treino.findMany({
+      where: usuario.papel === 'ADMIN' ? undefined : { autorId: usuario.id },
+      include: {
+        autor: { select: { nome: true } },
+        categoria: true,
+        versoes: { orderBy: { numero: 'desc' }, select: { numero: true, status: true, criadoEm: true, publicadoEm: true } }
+      },
+      orderBy: { nome: 'asc' }
+    });
+    return treinos.map((t) => ({
+      slug: t.slug,
+      nome: t.nome,
+      autor: t.autor.nome,
+      origem: t.origem,
+      categoria: t.categoria ? { slug: t.categoria.slug, nome: t.categoria.nome } : null,
+      publicada: t.versoes.find((v) => v.status === 'PUBLICADA')?.numero ?? null,
+      ultima: t.versoes[0]
+    }));
+  }
+
   async criar(dto: CriarTreinoDto, ctx: ContextoRequisicao) {
     if (await this.prisma.treino.findUnique({ where: { slug: dto.slug } })) throw conflito('SLUG_EM_USO', 'Já existe um treino com este slug.');
     const categoria = dto.categoriaSlug ? await this.prisma.categoria.findUnique({ where: { slug: dto.categoriaSlug } }) : null;

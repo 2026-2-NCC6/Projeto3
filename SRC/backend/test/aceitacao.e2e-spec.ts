@@ -102,6 +102,22 @@ describe('Cenário de aceitação (§9)', () => {
     expect(mkt.status).toBe(200);
   });
 
+  it('site lista os treinos do autor com rascunhos; admin vê todos (RF14, RF16)', async () => {
+    expect((await ctx.http.post(`/api/v1/treinos/${slug}/versoes`).set(auth(tokenAutor))).status).toBe(201);
+
+    const doAutor = await ctx.http.get('/api/v1/autoria/treinos').set(auth(tokenAutor));
+    expect(doAutor.status).toBe(200);
+    expect(doAutor.body).toEqual([
+      expect.objectContaining({ slug, nome: 'Alternância E2E', publicada: 1, ultima: expect.objectContaining({ numero: 2, status: 'RASCUNHO' }) })
+    ]);
+
+    const doAdmin = await ctx.http.get('/api/v1/autoria/treinos').set(auth(tokenAdmin));
+    expect(doAdmin.body.length).toBeGreaterThan(1);
+    expect(doAdmin.body.map((t: { slug: string }) => t.slug)).toContain(slug);
+
+    expect((await ctx.http.get('/api/v1/autoria/treinos').set(auth(tokenJogador))).status).toBe(403);
+  });
+
   it('app encontra o treino no catálogo e baixa a versão com ETag (RF03, RF04, RF18, RF21)', async () => {
     const lista = await ctx.http.get('/api/v1/treinos?nivel=INTERMEDIARIO&sensor=IMU').set(auth(tokenJogador));
     expect(lista.body.map((t: { slug: string }) => t.slug)).toContain(slug);
@@ -338,5 +354,14 @@ describe('Cenário de aceitação (§9)', () => {
   it('expõe saúde e documentação da API', async () => {
     expect((await ctx.http.get('/api/v1/health')).body).toMatchObject({ status: 'ok', banco: 'ok' });
     expect((await ctx.http.get('/api/v1/metrics')).status).toBe(401);
+  });
+
+  it('respostas com dados pessoais não ficam no cache do navegador (RNF Privacidade)', async () => {
+    for (const rota of ['/api/v1/me', '/api/v1/admin/auditoria', '/api/v1/autoria/treinos']) {
+      const r = await ctx.http.get(rota).set(auth(tokenAdmin));
+      expect(r.headers['cache-control']).toBe('no-store');
+    }
+    // O treino publicado continua revalidável por ETag, para o app treinar offline (RF21).
+    expect((await ctx.http.get(`/api/v1/treinos/${slug}`).set(auth(tokenJogador))).headers['cache-control']).toBe('private, no-cache');
   });
 });

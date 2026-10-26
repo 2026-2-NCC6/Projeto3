@@ -94,5 +94,5 @@ O CI ([.github/workflows/backend.yml](../../.github/workflows/backend.yml)) roda
 1. O BLE é autenticado por desafio e resposta desde o firmware 1.1.0. A chave de cada raquete fica cifrada na API (`CHAVE_DISPOSITIVOS`) e só é entregue ao dono, em `GET /dispositivos/{id}/chave`. Os dados de golpe continuam trafegando legíveis (sem dado pessoal). O desafio da placa não vem de um gerador criptográfico por hardware.
 2. O modo offline executa sem o simulador da máquina, que roda no servidor.
 3. O simulador mantém estado em memória: o MVP roda em instância única. O estado também é espelhado no banco, então a sessão retoma após um reinício do servidor.
-4. App e site ainda não consomem esta API.
+4. O app ([SRC/app](../app/README.md)) e o site ([SRC/site](../site/README.md)) consomem esta API. O cadastro de conta existe só no app, que pede a declaração de maioridade.
 5. Um access token continua válido por até 15 min depois de a conta ser desativada; o refresh é revogado na hora.

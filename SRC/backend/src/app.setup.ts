@@ -51,6 +51,13 @@ export function configurarApp(app: INestApplication) {
   const docs = helmet({ contentSecurityPolicy: false });
   app.use((req: Request, res: Response, next: NextFunction) => (req.path.startsWith(`/${PREFIXO}/docs`) ? docs : padrao)(req, res, next));
 
+  // Respostas trazem dados pessoais: nada fica no cache do navegador ou de proxies (LGPD).
+  // Rotas que podem ser cacheadas definem o próprio Cache-Control (ex.: GET /treinos/:slug).
+  app.use(`/${PREFIXO}`, (_req: Request, res: Response, next: NextFunction) => {
+    res.setHeader('Cache-Control', 'no-store');
+    next();
+  });
+
   app.enableCors({ origin: config.corsOrigens.length ? config.corsOrigens : false, exposedHeaders: ['ETag', 'x-request-id'] });
   app.useWebSocketAdapter(new AdaptadorSocket(app, config.corsOrigens));
   return app;

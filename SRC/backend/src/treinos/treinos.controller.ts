@@ -38,6 +38,13 @@ export class TreinosController {
     return corpo;
   }
 
+  /** RF14/RF16: treinos do autor em qualquer status (admin vê todos), para o painel de autoria do site. */
+  @Papeis('AUTOR', 'ADMIN')
+  @Get('autoria/treinos')
+  daAutoria(@Contexto() ctx: ContextoRequisicao) {
+    return this.treinos.daAutoria(ctx.usuario);
+  }
+
   @Papeis('AUTOR', 'ADMIN')
   @Post('treinos')
   criar(@Body() dto: CriarTreinoDto, @Contexto() ctx: ContextoRequisicao) {
