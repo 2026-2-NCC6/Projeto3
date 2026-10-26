@@ -42,6 +42,31 @@ describe('validarConteudo (RF15, §3, RNF Segurança física)', () => {
     expect(campos(c)).toContain('conclusao.valor');
   });
 
+  describe('duração estimada compatível com os lançamentos (§3)', () => {
+    // conteudoValido(): 10 bolas a cada 4 s = 40 s de máquina
+    it('aceita duração entre o tempo de máquina e o dobro dele (mínimo 1 min)', () => {
+      expect(campos({ ...conteudoValido(), duracaoMin: 1 })).not.toContain('duracaoMin');
+    });
+
+    it('barra duração muito maior que o tempo de lançamentos', () => {
+      expect(campos({ ...conteudoValido(), duracaoMin: 15 })).toContain('duracaoMin');
+    });
+
+    it('barra duração menor que o tempo de lançamentos', () => {
+      const c = conteudoValido();
+      c.exercicios[0].repeticoes = 300; // 20 min de máquina
+      expect(campos({ ...c, duracaoMin: 10, conclusao: { tipo: 'REPETICOES', valor: 300 } })).toContain('duracaoMin');
+    });
+
+    it('usa o intervalo efetivo (com o mínimo de operação) no cálculo', () => {
+      const c = conteudoValido();
+      c.exercicios[0] = { ...c.exercicios[0], repeticoes: 60, lancamento: { ...c.exercicios[0].lancamento, intervaloSeg: 1 } };
+      // intervalo efetivo 1,5 s → 90 s de máquina; 1 min seria menor que isso
+      expect(campos({ ...c, duracaoMin: 1, conclusao: { tipo: 'REPETICOES', valor: 60 } })).toContain('duracaoMin');
+      expect(campos({ ...c, duracaoMin: 2, conclusao: { tipo: 'REPETICOES', valor: 60 } })).not.toContain('duracaoMin');
+    });
+  });
+
   it('barra meta de precisão fora de 0–100 e penalidade negativa', () => {
     const c = { ...conteudoValido(), pontuacao: { ...conteudoValido().pontuacao, metaPrecisao: 101, penalidadeErro: -1 } };
     expect(campos(c)).toEqual(expect.arrayContaining(['pontuacao.metaPrecisao', 'pontuacao.penalidadeErro']));

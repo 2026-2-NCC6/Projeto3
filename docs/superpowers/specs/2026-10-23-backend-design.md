@@ -112,7 +112,7 @@ RASCUNHO ──enviar-revisao (validação ok)──▶ EM_REVISAO ──publica
 ```
 
 - Criar treino e editar versões: papel `AUTOR` (só os próprios) ou `ADMIN`.
-- Validar retorna lista de erros: campos obrigatórios da §3, sensores desconhecidos, parâmetros fora dos limites de operação, `modoPublico=INFANTIL` com velocidade acima do limite infantil.
+- Validar retorna lista de erros: campos obrigatórios da §3, sensores desconhecidos, parâmetros fora dos limites de operação, `modoPublico=INFANTIL` com velocidade acima do limite infantil, e duração estimada incompatível com os lançamentos (nunca menor que o tempo de máquina, nem maior que o dobro dele; mínimo 1 min).
 - Ensaiar: simula a sequência sem tempo real e devolve linha do tempo de lançamentos + resumo calculado com golpes de exemplo (porte de `golpesDeExemplo`).
 - Publicar: autor do treino ou admin; arquiva a publicada anterior na mesma transação.
 - Nova versão copia a mais recente para um `RASCUNHO` com `numero+1`.

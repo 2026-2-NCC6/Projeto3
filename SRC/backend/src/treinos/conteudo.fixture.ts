@@ -6,7 +6,7 @@ export function conteudoValido(): ConteudoTreino {
     publicoAlvo: 'Adultos',
     objetivo: 'Consistência',
     nivel: 'INTERMEDIARIO',
-    duracaoMin: 15,
+    duracaoMin: 1,
     modoPublico: 'ADULTO',
     instrucoes: ['Bata na diagonal.'],
     equipamentos: ['Raquete instrumentada'],

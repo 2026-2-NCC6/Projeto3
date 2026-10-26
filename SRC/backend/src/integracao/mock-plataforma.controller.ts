@@ -14,7 +14,11 @@ const base = {
   equipamentos: ['Raquete com sensor Tennis Analytics', 'Máquina lançadora (ou simulador)', 'Bolas de tênis'],
   riscos: ['Faça aquecimento antes de começar.', 'Mantenha a área de lançamento livre.'],
   sensores: ['IMU' as const],
-  feedbacks: { acerto: 'Matriz de LEDs: check', erro: 'Matriz de LEDs: X', sequencia: 'Contador de sequência' }
+  feedbacks: {
+    acerto: 'Raquete: LED e tom pela força do golpe; app: indicação de acerto',
+    erro: 'App: indicação de erro e sequência zerada',
+    sequencia: 'App: contador de sequência'
+  }
 };
 
 /** Catálogo que a "plataforma mãe" simulada oferece. */
@@ -33,9 +37,9 @@ export const TREINOS_PLATAFORMA_MAE: TreinoExterno[] = [
       modoPublico: 'TODOS',
       pontuacao: { base: 10, bonusSequencia: 5, bonusForte: 5, penalidadeErro: 0, metaPrecisao: 40 },
       exercicios: [
-        { nome: 'Devolução cruzada', repeticoes: 12, golpeEsperado: 'ALTERNADO', lancamento: { velocidadeKmh: 45, rotacao: 'PLANO', direcao: 'CENTRO', alturaM: 1, intervaloSeg: 5 } }
+        { nome: 'Devolução cruzada', repeticoes: 90, golpeEsperado: 'ALTERNADO', lancamento: { velocidadeKmh: 45, rotacao: 'PLANO', direcao: 'CENTRO', alturaM: 1, intervaloSeg: 5 } }
       ],
-      conclusao: { tipo: 'REPETICOES', valor: 12 }
+      conclusao: { tipo: 'REPETICOES', valor: 90 }
     }
   },
   {
@@ -52,9 +56,10 @@ export const TREINOS_PLATAFORMA_MAE: TreinoExterno[] = [
       modoPublico: 'INFANTIL',
       pontuacao: { base: 10, bonusSequencia: 2, bonusForte: 0, penalidadeErro: 0, metaPrecisao: 30 },
       exercicios: [
-        { nome: 'Fase 1: forehand', repeticoes: 8, golpeEsperado: 'FH', lancamento: { velocidadeKmh: 30, rotacao: 'PLANO', direcao: 'CENTRO', alturaM: 0.9, intervaloSeg: 6 } }
+        { nome: 'Fase 1: forehand', repeticoes: 30, golpeEsperado: 'FH', lancamento: { velocidadeKmh: 30, rotacao: 'PLANO', direcao: 'CENTRO', alturaM: 0.9, intervaloSeg: 6 } },
+        { nome: 'Fase 2: backhand', repeticoes: 30, golpeEsperado: 'BH', lancamento: { velocidadeKmh: 30, rotacao: 'PLANO', direcao: 'CENTRO', alturaM: 0.9, intervaloSeg: 6 } }
       ],
-      conclusao: { tipo: 'REPETICOES', valor: 8 }
+      conclusao: { tipo: 'REPETICOES', valor: 60 }
     }
   }
 ];

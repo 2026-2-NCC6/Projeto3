@@ -1,9 +1,10 @@
 import { PrismaClient } from '@prisma/client';
 import { hash } from 'bcryptjs';
 import { randomBytes } from 'node:crypto';
-import type { ConteudoTreino, Direcao, GolpeEsperado, Rotacao } from '../src/treinos/conteudo';
+import type { ConteudoTreino, Direcao, Exercicio, GolpeEsperado, Rotacao } from '../src/treinos/conteudo';
 import { LIMITES_PADRAO } from '../src/treinos/conteudo';
 import { validarConteudo } from '../src/treinos/validacao';
+import { mesmoJson } from '../src/comum/json';
 import { colunasDoConteudo } from '../src/treinos/treinos.service';
 
 // Dados iniciais. Autores e nomes são fictícios (anonimização de demonstrações, LGPD).
@@ -13,6 +14,14 @@ type Nivel = ConteudoTreino['nivel'];
 const META: Record<Nivel, number> = { INICIANTE: 40, INTERMEDIARIO: 60, AVANCADO: 75 };
 const VELOCIDADE: Record<Nivel, number> = { INICIANTE: 45, INTERMEDIARIO: 65, AVANCADO: 85 };
 const DIRECAO: Record<string, Direcao> = { fundoEsq: 'ESQ', fundoCentro: 'CENTRO', fundoDir: 'DIR', curtaEsq: 'ESQ', curtaDir: 'DIR' };
+const FRACAO_LANCANDO = 0.75;
+// Fiel ao firmware atual: a raquete pisca o LED e toca um tom pela força em todo golpe;
+// acerto e erro são decididos e mostrados pelo app.
+export const FEEDBACKS = {
+  acerto: 'Raquete: LED e tom pela força do golpe; app: indicação de acerto',
+  erro: 'App: indicação de erro e sequência zerada',
+  sequencia: 'App: contador de sequência'
+};
 
 type Base = {
   slug: string;
@@ -29,7 +38,7 @@ type Base = {
   tutorial: NonNullable<ConteudoTreino['tutorial']>;
 };
 
-const TREINOS: Base[] = [
+export const TREINOS_SEED: Base[] = [
   {
     slug: 'cruzado-fundo', nome: 'Cruzado de fundo — consistência', autor: 'almeida', categoria: 'consistencia', versao: 3,
     nivel: 'INTERMEDIARIO', duracaoMin: 18, exercicios: 4, rotacao: 'TOPSPIN', intervaloSeg: 4, objetivo: 'Consistência no forehand cruzado',
@@ -91,7 +100,8 @@ const CATEGORIAS: Record<string, string> = {
 export function conteudoDoTreino(t: Base): ConteudoTreino {
   const lados = new Set(t.tutorial.golpes.map((g) => g.lado));
   const golpeEsperado: GolpeEsperado = lados.size > 1 ? 'ALTERNADO' : t.tutorial.golpes[0].lado;
-  const repeticoes = 10;
+  // Cerca de 75% da duração anunciada com a máquina lançando; o resto fica para pausas (§3).
+  const repeticoes = Math.max(1, Math.round((t.duracaoMin * 60 * FRACAO_LANCANDO) / (t.exercicios * t.intervaloSeg)));
   const iniciante = t.nivel === 'INICIANTE';
   return {
     publicoAlvo: iniciante ? 'Todos os públicos' : 'Adultos',
@@ -109,7 +119,7 @@ export function conteudoDoTreino(t: Base): ConteudoTreino {
     ],
     sensores: ['IMU'],
     pontuacao: { base: 10, bonusSequencia: 5, bonusForte: 5, penalidadeErro: 0, metaPrecisao: META[t.nivel] },
-    exercicios: Array.from({ length: t.exercicios }, (_, i) => ({
+    exercicios: Array.from({ length: t.exercicios }, (_, i): Exercicio => ({
       nome: `Série ${i + 1}`,
       repeticoes,
       golpeEsperado,
@@ -121,7 +131,7 @@ export function conteudoDoTreino(t: Base): ConteudoTreino {
         intervaloSeg: t.intervaloSeg
       }
     })),
-    feedbacks: { acerto: 'Matriz de LEDs: check', erro: 'Matriz de LEDs: X', sequencia: 'Contador de sequência na matriz' },
+    feedbacks: FEEDBACKS,
     conclusao: { tipo: 'REPETICOES', valor: t.exercicios * repeticoes },
     tutorial: t.tutorial
   };
@@ -152,11 +162,34 @@ export async function semear(prisma: PrismaClient, opcoes: { adminEmail: string;
     categorias[slug] = (await prisma.categoria.upsert({ where: { slug }, update: {}, create: { slug, nome } })).id;
   }
 
-  for (const t of TREINOS) {
-    if (await prisma.treino.findUnique({ where: { slug: t.slug } })) continue;
+  for (const t of TREINOS_SEED) {
     const conteudo = conteudoDoTreino(t);
     const erros = validarConteudo(conteudo, LIMITES_PADRAO);
     if (erros.length) throw new Error(`Seed inválido em ${t.slug}: ${JSON.stringify(erros)}`);
+
+    const existente = await prisma.treino.findUnique({ where: { slug: t.slug }, include: { versoes: { orderBy: { numero: 'desc' }, take: 1 } } });
+    if (existente) {
+      // Seed já aplicado: se os dados iniciais mudaram, publica uma versão nova e arquiva a
+      // anterior, como no fluxo normal (RF16), em vez de alterar a versão publicada.
+      const ultima = existente.versoes[0];
+      if (ultima && mesmoJson(ultima.conteudo, conteudo)) continue;
+      await prisma.$transaction([
+        prisma.treinoVersao.updateMany({ where: { treinoId: existente.id, status: 'PUBLICADA' }, data: { status: 'ARQUIVADA' } }),
+        prisma.treinoVersao.create({
+          data: {
+            treinoId: existente.id,
+            numero: (ultima?.numero ?? 0) + 1,
+            status: 'PUBLICADA',
+            publicadoEm: new Date(),
+            ...colunasDoConteudo(conteudo),
+            notasAlteracao: 'Atualização dos dados iniciais: repetições compatíveis com a duração estimada',
+            criadoPorId: existente.autorId
+          }
+        })
+      ]);
+      continue;
+    }
+
     await prisma.treino.create({
       data: {
         slug: t.slug,

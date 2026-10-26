@@ -1,18 +1,12 @@
 import { Injectable } from '@nestjs/common';
-import { isDeepStrictEqual } from 'node:util';
 import { AuditoriaService } from '../auditoria/auditoria.service';
 import type { ContextoRequisicao } from '../comum/contexto';
+import { mesmoJson } from '../comum/json';
 import { ParametrosService } from '../parametros/parametros.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { colunasDoConteudo } from '../treinos/treinos.service';
 import { validarConteudo } from '../treinos/validacao';
 import { PlataformaMaeCliente } from './plataforma-mae.cliente';
-
-/**
- * Igualdade de conteúdo JSON. O jsonb reordena chaves e objetos podem vir de realms diferentes
- * (ex.: fetch nativo vs. Prisma), então os dois lados são normalizados antes da comparação.
- */
-const mesmoJson = (a: unknown, b: unknown) => isDeepStrictEqual(JSON.parse(JSON.stringify(a)), JSON.parse(JSON.stringify(b)));
 
 /**
  * Recebe definições de treino da plataforma mãe (§1: "receber a definição de um treino").
