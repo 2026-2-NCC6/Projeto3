@@ -78,7 +78,8 @@ export function RootNavigator() {
       <Stack.Screen name="Sessao" component={SessaoScreen} options={{ gestureEnabled: false }} />
       <Stack.Screen name="ParadaSegura" component={ParadaSeguraScreen} options={{ gestureEnabled: false }} />
       <Stack.Screen name="Resultado" component={ResultadoScreen} options={{ gestureEnabled: false }} />
-      <Stack.Screen name="Debug" component={DebugScreen} />
+      {/* Diagnóstico envia comandos direto à placa: só em build de desenvolvimento. */}
+      {__DEV__ && <Stack.Screen name="Debug" component={DebugScreen} />}
     </Stack.Navigator>
   );
 }

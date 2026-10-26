@@ -288,7 +288,7 @@ export function SessaoScreen({ navigation, route }: Props) {
       </View>
 
       {usouSensor ? (
-        <Pressable style={styles.demoRow} onLongPress={() => navigation.navigate('Debug')} delayLongPress={700}>
+        <Pressable style={styles.demoRow} onLongPress={__DEV__ ? () => navigation.navigate('Debug') : undefined} delayLongPress={700}>
           <View style={[styles.liveDot, { backgroundColor: sensorAtivo ? colors.success : colors.warning }]} />
           <Text style={styles.sensorTexto} numberOfLines={1}>
             {sensorAtivo ? `Sensor BLE ativo · ${ble.nomeDispositivo ?? ''}` : 'Sensor fora do ar — reconectando sozinho'}

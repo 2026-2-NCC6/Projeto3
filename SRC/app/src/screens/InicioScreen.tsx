@@ -11,6 +11,7 @@ import { PageHeader, PrimaryButton } from '../components/ui';
 import { BouncingTennisBall } from '../components/TennisBall';
 import { IconChevronRight } from '../components/Icons';
 import { CornerWatermark } from '../components/Watermark';
+import { PERFIL_DEMO } from '../data/perfilDemo';
 
 type Props = CompositeScreenProps<
   BottomTabScreenProps<TabParamList, 'Inicio'>,
@@ -54,7 +55,7 @@ export function InicioScreen({ navigation }: Props) {
     <SafeAreaView style={styles.screen}>
       <CornerWatermark />
       <ScrollView contentContainerStyle={styles.content}>
-        <PageHeader eyebrow={saudacao()} title="Vitor" />
+        <PageHeader eyebrow={saudacao()} title={PERFIL_DEMO.apelido} />
 
         <View style={styles.startCard}>
           <BouncingTennisBall size={30} />

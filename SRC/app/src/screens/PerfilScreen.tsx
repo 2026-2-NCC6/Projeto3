@@ -9,6 +9,7 @@ import { fonts } from '../theme/fonts';
 import { DangerButton, GhostButton, PageHeader, StatRow } from '../components/ui';
 import { IconShield } from '../components/Icons';
 import { CornerWatermark } from '../components/Watermark';
+import { PERFIL_DEMO } from '../data/perfilDemo';
 
 type Props = CompositeScreenProps<
   BottomTabScreenProps<TabParamList, 'Perfil'>,
@@ -41,11 +42,11 @@ export function PerfilScreen({ navigation }: Props) {
 
         <View style={styles.profileRow}>
           <View style={styles.avatar}>
-            <Text style={styles.avatarLabel}>VK</Text>
+            <Text style={styles.avatarLabel}>{PERFIL_DEMO.iniciais}</Text>
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={styles.name}>Vitor Kanashiro</Text>
-            <Text style={styles.email}>vkkanashiro2@gmail.com</Text>
+            <Text style={styles.name}>{PERFIL_DEMO.nome}</Text>
+            <Text style={styles.email}>{PERFIL_DEMO.email}</Text>
           </View>
           <GhostButton label="Editar" onPress={() => {}} style={{ height: 36, paddingHorizontal: 8 }} />
         </View>

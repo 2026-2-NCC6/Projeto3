@@ -1,0 +1,44 @@
+name: seguranca
+
+# Verificações contínuas de segurança (RNF Segurança e Manutenibilidade):
+# segredos em todo o histórico, testes e tipos do app, e dependências vulneráveis.
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  segredos:
+    name: Busca de segredos (gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: gitleaks em todo o histórico
+        run: docker run --rm -v "$PWD:/repo" zricethezav/gitleaks:v8.21.2 detect --source /repo --redact -v
+
+  app:
+    name: App (testes, tipos e dependências)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: SRC/app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: SRC/app/package-lock.json
+      - run: npm ci
+      - name: Testes
+        run: npm test
+      - name: Tipos
+        run: npx tsc --noEmit
+      # Ainda há vulnerabilidades herdadas do Expo SDK 51 (risco S-05, em andamento):
+      # o relatório sai no log sem bloquear o push até a troca do SDK.
+      - name: Dependências vulneráveis (relatório)
+        run: npm audit --audit-level=high || echo "::warning::npm audit encontrou vulnerabilidades no app (S-05)"

@@ -111,7 +111,7 @@ export function PareamentoScreen({ navigation, route }: Props) {
 
         <Pressable
           style={styles.codeCard}
-          onLongPress={real ? () => navigation.navigate('Debug') : undefined}
+          onLongPress={real && __DEV__ ? () => navigation.navigate('Debug') : undefined}
           delayLongPress={700}
           accessibilityHint={real ? 'Toque longo abre a tela de diagnóstico do sensor' : undefined}
         >
