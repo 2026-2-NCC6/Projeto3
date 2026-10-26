@@ -122,8 +122,8 @@ export function BleProvider({ children, obterChave = chaveDeDesenvolvimento }: {
   const esperasMensagem = useRef<Espera[]>([]);
   const dispositivo = useRef<Device | null>(null);
   const inscricoes = useRef<Subscription[]>([]);
-  const timeoutBusca = useRef<ReturnType<typeof setTimeout>>();
-  const timeoutReconexao = useRef<ReturnType<typeof setTimeout>>();
+  const timeoutBusca = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const timeoutReconexao = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const desconexaoIntencional = useRef(false);
   const esperandoEstado = useRef<Array<(e: EstadoDispositivo | null) => void>>([]);
   const ouvintesGolpe = useRef(new Set<(g: GolpeSensor) => void>());
@@ -166,9 +166,12 @@ export function BleProvider({ children, obterChave = chaveDeDesenvolvimento }: {
       pararBusca();
       pararReconexao();
       inscricoes.current.forEach((s) => s.remove());
-      manager?.destroy().catch(() => {});
+      // Desde a 3.4 o BleManager é um singleton do app inteiro. destroy() derrubaria o cliente
+      // nativo que um novo mount (Fast Refresh, por exemplo) recebe de volta; basta soltar a raquete.
+      desconexaoIntencional.current = true;
+      dispositivo.current?.cancelConnection().catch(() => {});
     },
-    [manager, pararBusca, pararReconexao]
+    [pararBusca, pararReconexao]
   );
 
   const tratarMensagem = useCallback(

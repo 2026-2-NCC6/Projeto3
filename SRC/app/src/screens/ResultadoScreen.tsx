@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/types';
 import type { Conquista, Recomendacao, ResumoServidor } from '../api/tipos';
@@ -178,7 +179,7 @@ export function ResultadoScreen({ navigation, route }: Props) {
               <Pressable
                 key={r.tipo}
                 disabled={!r.treinoSlug}
-                onPress={() => r.treinoSlug && navigation.navigate('Preparacao', { slug: r.treinoSlug })}
+                onPress={() => r.treinoSlug && navigation.popTo('Preparacao', { slug: r.treinoSlug })}
                 style={styles.recomendacao}
                 accessibilityRole={r.treinoSlug ? 'button' : 'text'}
               >
@@ -196,8 +197,8 @@ export function ResultadoScreen({ navigation, route }: Props) {
       </ScrollView>
 
       <View style={styles.footer}>
-        <OutlineButton label="Repetir treino" onPress={() => navigation.replace('Preparacao', { slug: resumoLocal.treinoSlug })} style={{ flex: 1, height: 54 }} />
-        <PrimaryButton label="Ver histórico" onPress={() => navigation.navigate('MainTabs', { screen: 'Historico' })} style={{ flex: 1.2, height: 54 }} />
+        <OutlineButton label="Repetir treino" onPress={() => navigation.popTo('Preparacao', { slug: resumoLocal.treinoSlug })} style={{ flex: 1, height: 54 }} />
+        <PrimaryButton label="Ver histórico" onPress={() => navigation.popTo('MainTabs', { screen: 'Historico' })} style={{ flex: 1.2, height: 54 }} />
       </View>
     </SafeAreaView>
   );

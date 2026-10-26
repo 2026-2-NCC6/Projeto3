@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Modal, Pressable, SafeAreaView, StyleSheet, Text, Vibration, View } from 'react-native';
+import { ActivityIndicator, Modal, Pressable, StyleSheet, Text, Vibration, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { io, Socket } from 'socket.io-client';

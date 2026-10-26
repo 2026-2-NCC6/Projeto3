@@ -61,10 +61,13 @@ jobs:
         run: npm test
       - name: Tipos
         run: npx tsc --noEmit
-      # Ainda há vulnerabilidades herdadas do Expo SDK 51 (risco S-05, em andamento):
-      # o relatório sai no log sem bloquear o push até a troca do SDK.
-      - name: Dependências vulneráveis (relatório)
-        run: npm audit --audit-level=high || echo "::warning::npm audit encontrou vulnerabilidades no app (S-05)"
+      # Expo SDK 54: de 53 vulnerabilidades (SDK 51) restam 5 altas, todas em ferramentas de build
+      # (Expo CLI e Metro), nenhuma no código que vai para o APK. node-forge não tem versão
+      # corrigida e image-size 2 quebra o Metro: ver SRC/app/README.md. Crítica bloqueia; alta avisa.
+      - name: Dependências vulneráveis (bloqueia crítica)
+        run: npm audit --audit-level=critical
+      - name: Dependências vulneráveis (relatório de altas)
+        run: npm audit --audit-level=high || echo "::warning::npm audit encontrou vulnerabilidades altas no app (residuais aceitos em SRC/app/README.md)"
 
   site:
     name: Site (testes, build e dependências)

@@ -1,6 +1,6 @@
 # App mobile — Tennis Analytics
 
-Expo SDK 51 / React Native 0.74. Fala com a API (`SRC/backend`) por HTTPS e com a raquete
+Expo SDK 54 / React Native 0.81 / React 19, com a New Architecture ligada. Fala com a API (`SRC/backend`) por HTTPS e com a raquete
 (`SRC/arduino/tennis_imu`) por BLE autenticado.
 
 ## Rodando
@@ -15,6 +15,8 @@ npm run dev                 # Metro para o build de desenvolvimento
 O BLE (`react-native-ble-plx`) e o cofre (`expo-secure-store`) são módulos nativos: **não funcionam
 no Expo Go**. Sempre que um módulo nativo entra no `package.json` é preciso gerar um build novo
 (`npx expo run:android` ou EAS), senão o app quebra ao abrir.
+
+Para gerar o build na nuvem, sem Android Studio: `npx eas-cli build --profile development --platform android`.
 
 Testes de unidade (node:test, sem emulador) e checagem de tipos:
 
@@ -44,3 +46,25 @@ npx tsc --noEmit
 - A tela de depuração BLE só existe em desenvolvimento.
 - No Perfil o titular exporta os próprios dados (JSON), revoga a telemetria e exclui a conta.
   Dependentes menores exigem consentimento do responsável.
+
+## Versão do Expo e dependências
+
+O app está no SDK 54 e não no mais recente (58) por causa do BLE. O `react-native-ble-plx` é um
+módulo nativo do formato antigo: na New Architecture ele roda pela camada de compatibilidade do
+React Native, que está comprovada até a 0.81. O SDK 54 também é o último que ainda aceita
+desligar a New Architecture.
+
+**Se o BLE falhar no aparelho depois da atualização** (não acha a raquete, ou a conexão cai logo após o
+handshake): ponha `"newArchEnabled": false` no `app.json`, gere um build novo e anote o
+resultado para o relatório.
+
+`npm audit` (SDK 51 → 54): de 53 vulnerabilidades (2 críticas, 21 altas) para 5 altas. Nenhuma está no
+código que vai para o APK; todas estão nas ferramentas de build:
+
+| Pacote | Por que fica | Exposição |
+| --- | --- | --- |
+| `node-forge` (via `@expo/cli`, `@expo/code-signing-certificates`) | Não existe versão corrigida | A Expo CLI só o usa para assinar manifestos de atualização (expo-updates ou Expo Go) e builds iOS locais no macOS; o projeto não usa nenhum dos dois |
+| `image-size` 1.x (via Metro) | A versão corrigida (2.x) mudou a API e quebra o Metro | Lê só as imagens do próprio projeto durante o build |
+| `@expo/cli`, `expo` | Herdam os dois acima | Ferramenta de desenvolvimento |
+
+O `postcss` foi forçado para 8.5.31 em `overrides`. No CI, vulnerabilidade crítica bloqueia e alta gera aviso.
