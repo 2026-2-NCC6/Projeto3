@@ -33,6 +33,7 @@ Projeto desenvolvido para otimizar o acompanhamento e a evolução de praticante
  ├── 🗂️ SRC/<br>
  │   ├── 📁 app (aplicativo mobile — Expo/React Native, ver <a href="SRC/app/README.md">README do app</a>)<br>
  │   ├── 📁 arduino (firmware da raquete)<br>
+ │   ├── 📁 site (autoria e administração — React/Vite, ver <a href="SRC/site/README.md">README do site</a>)<br>
  │   └── 📁 backend (API — NestJS, ver <a href="SRC/backend/README.md">README da API</a>)<br>
  ├── 🗂️ docs/ (especificação de design da API)<br>
  ├── 📄 .gitignore<br>
