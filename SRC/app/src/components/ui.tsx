@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View, ViewStyle } from 'react-native';
+import { Pressable, StyleSheet, Text, TextInput, TextInputProps, View, ViewStyle } from 'react-native';
 import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
 import { IconBack } from './Icons';
@@ -95,6 +95,36 @@ export function ScreenHeader({ title, onBack }: { title: string; onBack: () => v
         <IconBack />
       </Pressable>
       <Text style={styles.headerTitle}>{title}</Text>
+    </View>
+  );
+}
+
+export function CampoTexto({ rotulo, ...props }: TextInputProps & { rotulo: string }) {
+  return (
+    <View style={{ gap: 8 }}>
+      <Text style={styles.campoRotulo}>{rotulo}</Text>
+      <TextInput placeholderTextColor={colors.textTertiary} accessibilityLabel={rotulo} {...props} style={[styles.campo, props.style]} />
+    </View>
+  );
+}
+
+/** Caixa de seleção com o texto clicável inteiro (alvo de toque grande, acessível). */
+export function Caixa({ marcada, onPress, children }: { marcada: boolean; onPress: () => void; children: React.ReactNode }) {
+  return (
+    <Pressable onPress={onPress} accessibilityRole="checkbox" accessibilityState={{ checked: marcada }} style={styles.caixaLinha}>
+      <View style={[styles.caixa, marcada && { backgroundColor: colors.primary, borderColor: colors.primary }]}>
+        {marcada && <Text style={styles.caixaMarca}>✓</Text>}
+      </View>
+      <Text style={styles.caixaTexto}>{children}</Text>
+    </Pressable>
+  );
+}
+
+export function Aviso({ texto, tipo = 'info' }: { texto: string; tipo?: 'info' | 'erro' | 'ok' }) {
+  const cor = tipo === 'erro' ? colors.danger : tipo === 'ok' ? colors.success : colors.warning;
+  return (
+    <View accessibilityRole="alert" style={[styles.aviso, { borderColor: cor }]}>
+      <Text style={[styles.avisoTexto, { color: cor }]}>{texto}</Text>
     </View>
   );
 }
@@ -229,5 +259,38 @@ const styles = StyleSheet.create({
     fontSize: 34,
     color: colors.text,
     textTransform: 'uppercase'
-  }
+  },
+  campoRotulo: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: 10.5,
+    letterSpacing: 1.6,
+    textTransform: 'uppercase',
+    color: colors.textSecondary
+  },
+  campo: {
+    height: 52,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    color: colors.text,
+    fontFamily: fonts.body,
+    fontSize: 15
+  },
+  caixaLinha: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, paddingVertical: 6 },
+  caixa: {
+    width: 22,
+    height: 22,
+    borderRadius: 5,
+    borderWidth: 1.5,
+    borderColor: colors.borderStrong,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 1
+  },
+  caixaMarca: { color: colors.primaryInk, fontFamily: fonts.bodyBold, fontSize: 14, lineHeight: 16 },
+  caixaTexto: { flex: 1, fontFamily: fonts.body, fontSize: 13, lineHeight: 19, color: colors.textSecondary },
+  aviso: { borderWidth: 1, borderRadius: 8, paddingHorizontal: 14, paddingVertical: 10 },
+  avisoTexto: { fontFamily: fonts.body, fontSize: 12.5, lineHeight: 18 }
 });

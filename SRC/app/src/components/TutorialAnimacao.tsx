@@ -3,7 +3,10 @@ import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, Line, Rect, Text as SvgText } from 'react-native-svg';
 import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
-import type { GolpeTutorial, Treino, ZonaAlvo } from '../data/treinos';
+import type { GolpeTutorial as GolpeTutorialApi } from '../api/tipos';
+
+type ZonaAlvo = 'fundoEsq' | 'fundoCentro' | 'fundoDir' | 'curtaEsq' | 'curtaDir';
+type GolpeTutorial = Omit<GolpeTutorialApi, 'alvo'> & { alvo: ZonaAlvo };
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 const AnimatedRect = Animated.createAnimatedComponent(Rect);
@@ -71,8 +74,13 @@ function interpolar(v: Animated.Value, entrada: number[], saida: number[]) {
   return v.interpolate({ inputRange: entrada, outputRange: saida, extrapolate: 'clamp' });
 }
 
-export function TutorialAnimacao({ treino }: { treino: Treino }) {
-  const { golpes, segPorBola } = treino.tutorial;
+/** Animação do tutorial do treino. Zonas desconhecidas (treino de outro autor) caem no centro do fundo. */
+export function TutorialAnimacao({ tutorial }: { tutorial: { golpes: GolpeTutorialApi[]; segPorBola: number } }) {
+  const { segPorBola } = tutorial;
+  const golpes = useMemo<GolpeTutorial[]>(
+    () => tutorial.golpes.map((g) => ({ ...g, alvo: g.alvo in ZONAS ? (g.alvo as ZonaAlvo) : 'fundoCentro' })),
+    [tutorial.golpes]
+  );
   const n = golpes.length;
   const progresso = useRef(new Animated.Value(0)).current;
   const [atual, setAtual] = useState(0);

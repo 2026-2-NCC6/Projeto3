@@ -45,7 +45,11 @@ type BleApi = {
   /** versão informada pela raquete depois de autenticar */
   versaoFirmware: string | null;
   estadoDispositivo: EstadoDispositivo | null;
-  conectar: () => Promise<void>;
+  /**
+   * Procura e conecta. `chaveManual` (32 hex) serve ao cadastro de uma raquete nova: a chave
+   * digitada é posta à prova na autenticação antes de ser registrada na conta.
+   */
+  conectar: (chaveManual?: string) => Promise<void>;
   desconectar: () => Promise<void>;
   enviar: (cmd: Comando) => Promise<void>;
   /** Envia o comando e devolve o estado do próximo E: recebido (null se não vier a tempo). */
@@ -114,6 +118,7 @@ export function BleProvider({ children, obterChave = chaveDeDesenvolvimento }: {
   obterChaveRef.current = obterChave;
   // A chave fica só em memória, enquanto a raquete estiver em uso (reconexões não buscam de novo).
   const chaveEmUso = useRef<{ id: string; chave: string } | null>(null);
+  const chaveManual = useRef<string | null>(null);
   const esperasMensagem = useRef<Espera[]>([]);
   const dispositivo = useRef<Device | null>(null);
   const inscricoes = useRef<Subscription[]>([]);
@@ -289,7 +294,8 @@ export function BleProvider({ children, obterChave = chaveDeDesenvolvimento }: {
 
       try {
         const chave =
-          chaveEmUso.current?.id === conectado.id ? chaveEmUso.current.chave : await obterChaveRef.current(conectado.id).catch(() => null);
+          chaveManual.current ??
+          (chaveEmUso.current?.id === conectado.id ? chaveEmUso.current.chave : await obterChaveRef.current(conectado.id).catch(() => null));
         const { versao } = await autenticarRaquete(chave, (cmd, aceita) => enviarEAguardarMensagem(cmd, aceita));
         chaveEmUso.current = { id: conectado.id, chave: chave! };
         setVersaoFirmware(versao);
@@ -357,8 +363,9 @@ export function BleProvider({ children, obterChave = chaveDeDesenvolvimento }: {
     [agendarReconexao]
   );
 
-  const conectar = useCallback(async () => {
+  const conectar = useCallback(async (chaveDigitada?: string) => {
     if (!manager) return;
+    chaveManual.current = chaveDigitada ?? null;
     desconexaoIntencional.current = false;
     setErro(null);
     stats.current = novasEstatisticas();

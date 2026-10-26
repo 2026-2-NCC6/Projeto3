@@ -31,7 +31,7 @@ Projeto desenvolvido para otimizar o acompanhamento e a evolução de praticante
  │   └── 📄 Documento - Projeto de Extensão - COM Empresa<br>
  ├── 🗂️ Imagens/<br>
  ├── 🗂️ SRC/<br>
- │   ├── 📁 app (aplicativo mobile — Expo/React Native)<br>
+ │   ├── 📁 app (aplicativo mobile — Expo/React Native, ver <a href="SRC/app/README.md">README do app</a>)<br>
  │   ├── 📁 arduino (firmware da raquete)<br>
  │   └── 📁 backend (API — NestJS, ver <a href="SRC/backend/README.md">README da API</a>)<br>
  ├── 🗂️ docs/ (especificação de design da API)<br>
