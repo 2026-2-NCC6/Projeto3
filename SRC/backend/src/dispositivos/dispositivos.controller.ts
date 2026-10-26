@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, HttpCode, Param, ParseUUIDPipe, Post, Put } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Header, HttpCode, Param, ParseUUIDPipe, Post, Put } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { Contexto, ContextoRequisicao } from '../comum/contexto';
 import { DispositivosService } from './dispositivos.service';
@@ -19,6 +19,13 @@ export class DispositivosController {
   @Post()
   registrar(@Body() dto: RegistrarDispositivoDto, @Contexto() ctx: ContextoRequisicao) {
     return this.dispositivos.registrar(dto, ctx);
+  }
+
+  /** Chave do BLE da raquete, só para o dono. O app usa para autenticar na raquete e não a guarda em disco. */
+  @Header('Cache-Control', 'no-store')
+  @Get(':id/chave')
+  chave(@Param('id', ParseUUIDPipe) id: string, @Contexto() ctx: ContextoRequisicao) {
+    return this.dispositivos.chave(id, ctx);
   }
 
   @Put(':id/status')

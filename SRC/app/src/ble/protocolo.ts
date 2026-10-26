@@ -7,7 +7,45 @@ export const NOME_DISPOSITIVO = 'ArduinoR4-IMU';
 export const TAMANHO_MAX_MSG = 20;
 export const SEQ_MAX = 9999;
 
-export type Comando = 'START' | 'PAUSE' | 'RESUME' | 'STOP' | 'PING' | 'DBG:0' | 'DBG:1';
+/**
+ * CH:/PA: autenticam o app (desafio e resposta com HMAC, ver hmac.ts). FB:1/FB:0 pedem à
+ * raquete o retorno de acerto/erro (RF08). Pelo BLE, só PING, CH: e PA: funcionam antes de autenticar.
+ */
+export type Comando = 'START' | 'PAUSE' | 'RESUME' | 'STOP' | 'PING' | 'DBG:0' | 'DBG:1' | 'FB:0' | 'FB:1' | `CH:${string}` | `PA:${string}`;
+
+/** Versão mínima com o BLE autenticado; placas abaixo dela são recusadas. */
+export const FIRMWARE_MINIMO = '1.1.0';
+/** Chave de segredo.exemplo.h: pública, nunca pode ser usada de verdade. */
+export const CHAVE_EXEMPLO = '000102030405060708090A0B0C0D0E0F';
+
+const HEX8 = /^[0-9A-F]{8}$/;
+
+/** true se `atual` ≥ `minimo`, comparando cada segmento como número (igual ao backend). */
+export function versaoAtende(atual: string, minimo: string) {
+  const partes = (v: string) => (/^\d+(\.\d+)*$/.test(v) ? v.split('.').map(Number) : null);
+  const a = partes(atual);
+  const m = partes(minimo);
+  if (!a || !m) return false;
+  for (let i = 0; i < Math.max(a.length, m.length); i++) {
+    const dif = (a[i] ?? 0) - (m[i] ?? 0);
+    if (dif !== 0) return dif > 0;
+  }
+  return true;
+}
+
+export function chaveValida(hex: string) {
+  return /^[0-9A-Fa-f]{32}$/.test(hex) && hex.toUpperCase() !== CHAVE_EXEMPLO;
+}
+
+export function comandoDesafio(na: string): Comando {
+  if (!HEX8.test(na.toUpperCase())) throw new Error('desafio deve ter 8 hex');
+  return `CH:${na.toUpperCase()}`;
+}
+
+export function comandoProva(pa: string): Comando {
+  if (!HEX8.test(pa.toUpperCase())) throw new Error('prova deve ter 8 hex');
+  return `PA:${pa.toUpperCase()}`;
+}
 
 export type EstadoDispositivo = 'AGUARDANDO' | 'COLETANDO' | 'PAUSADO' | 'PARADO';
 
@@ -28,7 +66,10 @@ export type Mensagem =
   | { tipo: 'erro'; texto: string }
   | { tipo: 'acel'; x: number; y: number; z: number }
   | { tipo: 'giro'; x: number; y: number; z: number }
-  | { tipo: 'amostra'; amostra: Amostra };
+  | { tipo: 'amostra'; amostra: Amostra }
+  /** CR:<Nb><PB> — desafio da placa e a prova de que ela conhece a chave */
+  | { tipo: 'desafio'; nb: string; pb: string }
+  | { tipo: 'versao'; versao: string };
 
 const ESTADOS: EstadoDispositivo[] = ['AGUARDANDO', 'COLETANDO', 'PAUSADO', 'PARADO'];
 const NUMERO = /^-?\d+(\.\d+)?$/;
@@ -70,6 +111,16 @@ export function interpretarMensagem(bruta: string): Mensagem | null {
   if (texto.startsWith('E:')) {
     const estado = texto.slice(2) as EstadoDispositivo;
     return ESTADOS.includes(estado) ? { tipo: 'estado', estado } : null;
+  }
+
+  if (texto.startsWith('CR:')) {
+    const corpo = texto.slice(3).toUpperCase();
+    return /^[0-9A-F]{16}$/.test(corpo) ? { tipo: 'desafio', nb: corpo.slice(0, 8), pb: corpo.slice(8) } : null;
+  }
+
+  if (texto.startsWith('V:')) {
+    const versao = texto.slice(2);
+    return /^\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(versao) ? { tipo: 'versao', versao } : null;
   }
 
   if (texto.startsWith('ERR:')) {

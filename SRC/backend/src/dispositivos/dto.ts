@@ -17,6 +17,10 @@ export class RegistrarDispositivoDto {
 
   @Matches(VERSAO)
   firmwareVersao: string;
+
+  /** Chave do BLE da raquete (32 hex, a mesma do segredo.h). Guardada cifrada; nunca volta nas respostas. */
+  @Matches(/^[0-9A-Fa-f]{32}$/, { message: 'chave deve ter 32 caracteres hexadecimais' })
+  chave: string;
 }
 
 class SensoresDto {

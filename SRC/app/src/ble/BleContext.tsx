@@ -1,6 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { PermissionsAndroid, Platform } from 'react-native';
 import type { BleManager, Device, Subscription } from 'react-native-ble-plx';
+import { ErroAutenticacao, autenticarRaquete } from './autenticacao';
 import {
   Amostra,
   CHAR_CMD_UUID,
@@ -8,6 +9,7 @@ import {
   Comando,
   EstadoDispositivo,
   GolpeSensor,
+  Mensagem,
   NOME_DISPOSITIVO,
   SERVICE_UUID,
   avaliarSeq,
@@ -15,6 +17,12 @@ import {
   interpretarMensagem,
   textoParaBase64
 } from './protocolo';
+
+/** Devolve a chave (32 hex) da raquete com este id BLE, ou null se a conta não a tiver. */
+export type ObterChave = (idBle: string) => Promise<string | null>;
+
+// Só para testar em bancada antes do login pela API: em build de produção não há chave embutida.
+const chaveDeDesenvolvimento: ObterChave = async () => (__DEV__ ? (process.env.EXPO_PUBLIC_CHAVE_DISPOSITIVO_DEV ?? null) : null);
 
 export type StatusBle = 'desconectado' | 'procurando' | 'conectando' | 'conectado' | 'reconectando';
 
@@ -32,6 +40,10 @@ type BleApi = {
   erro: string | null;
   erroSensor: boolean;
   nomeDispositivo: string | null;
+  /** id BLE da raquete conectada (MAC no Android, UUID no iOS) */
+  idDispositivo: string | null;
+  /** versão informada pela raquete depois de autenticar */
+  versaoFirmware: string | null;
   estadoDispositivo: EstadoDispositivo | null;
   conectar: () => Promise<void>;
   desconectar: () => Promise<void>;
@@ -86,14 +98,23 @@ function novasEstatisticas(): Estatisticas {
 
 const BleCtx = createContext<BleApi | null>(null);
 
-export function BleProvider({ children }: { children: React.ReactNode }) {
+type Espera = { aceita: (m: Mensagem) => boolean; resolver: (m: Mensagem | null) => void };
+
+export function BleProvider({ children, obterChave = chaveDeDesenvolvimento }: { children: React.ReactNode; obterChave?: ObterChave }) {
   const manager = useMemo(criarManager, []);
   const [status, setStatus] = useState<StatusBle>('desconectado');
   const [erro, setErro] = useState<string | null>(null);
   const [erroSensor, setErroSensor] = useState(false);
   const [nomeDispositivo, setNomeDispositivo] = useState<string | null>(null);
+  const [idDispositivo, setIdDispositivo] = useState<string | null>(null);
+  const [versaoFirmware, setVersaoFirmware] = useState<string | null>(null);
   const [estadoDispositivo, setEstadoDispositivo] = useState<EstadoDispositivo | null>(null);
 
+  const obterChaveRef = useRef(obterChave);
+  obterChaveRef.current = obterChave;
+  // A chave fica só em memória, enquanto a raquete estiver em uso (reconexões não buscam de novo).
+  const chaveEmUso = useRef<{ id: string; chave: string } | null>(null);
+  const esperasMensagem = useRef<Espera[]>([]);
   const dispositivo = useRef<Device | null>(null);
   const inscricoes = useRef<Subscription[]>([]);
   const timeoutBusca = useRef<ReturnType<typeof setTimeout>>();
@@ -117,7 +138,11 @@ export function BleProvider({ children }: { children: React.ReactNode }) {
     inscricoes.current = [];
     dispositivo.current = null;
     setEstadoDispositivo(null);
+    setVersaoFirmware(null);
     resolverEspera(null);
+    const esperas = esperasMensagem.current;
+    esperasMensagem.current = [];
+    esperas.forEach((e) => e.resolver(null));
   }, [resolverEspera]);
 
   const pararBusca = useCallback(() => {
@@ -149,7 +174,18 @@ export function BleProvider({ children }: { children: React.ReactNode }) {
         console.warn(`[BLE] mensagem ignorada: ${JSON.stringify(bruta)}`);
         return;
       }
+      const espera = esperasMensagem.current.find((e) => e.aceita(msg));
+      if (espera) {
+        esperasMensagem.current = esperasMensagem.current.filter((e) => e !== espera);
+        espera.resolver(msg);
+        if (msg.tipo !== 'estado') return;
+      }
       switch (msg.tipo) {
+        case 'versao':
+          setVersaoFirmware(msg.versao);
+          return;
+        case 'desafio':
+          return;
         case 'golpe': {
           const s = stats.current;
           const { aceitar, lacuna } = avaliarSeq(s.ultimoSeq, msg.golpe.seq);
@@ -172,6 +208,7 @@ export function BleProvider({ children }: { children: React.ReactNode }) {
           return;
         case 'erro':
           if (msg.texto === 'MPU') setErroSensor(true);
+          else if (msg.texto === 'AUTH') setErro('A raquete recusou um comando: a conexão não está autenticada.');
           else setErro(`O dispositivo respondeu ERR:${msg.texto}`);
           return;
         case 'acel':
@@ -215,7 +252,28 @@ export function BleProvider({ children }: { children: React.ReactNode }) {
     [escrever]
   );
 
-  // Abre o canal de dados e só considera conectado depois que a placa responde um E:.
+  const enviarEAguardarMensagem = useCallback(
+    (cmd: Comando, aceita: (m: Mensagem) => boolean, timeoutMs = TEMPO_HANDSHAKE_MS) =>
+      new Promise<Mensagem | null>((resolve) => {
+        const timer = setTimeout(() => {
+          esperasMensagem.current = esperasMensagem.current.filter((e) => e !== espera);
+          resolve(null);
+        }, timeoutMs);
+        const espera: Espera = {
+          aceita,
+          resolver: (m) => {
+            clearTimeout(timer);
+            resolve(m);
+          }
+        };
+        esperasMensagem.current.push(espera);
+        escrever(cmd).catch(() => espera.resolver(null));
+      }),
+    [escrever]
+  );
+
+  // Abre o canal de dados, autentica (desafio e resposta) e só considera conectado
+  // depois que a placa responde um E:.
   const prepararConexao = useCallback(
     async (conectado: Device, aoCair: (id: string) => void) => {
       await conectado.discoverAllServicesAndCharacteristics();
@@ -228,6 +286,19 @@ export function BleProvider({ children }: { children: React.ReactNode }) {
           tratarMensagem(base64ParaTexto(c.value));
         })
       );
+
+      try {
+        const chave =
+          chaveEmUso.current?.id === conectado.id ? chaveEmUso.current.chave : await obterChaveRef.current(conectado.id).catch(() => null);
+        const { versao } = await autenticarRaquete(chave, (cmd, aceita) => enviarEAguardarMensagem(cmd, aceita));
+        chaveEmUso.current = { id: conectado.id, chave: chave! };
+        setVersaoFirmware(versao);
+        setIdDispositivo(conectado.id);
+      } catch (e) {
+        limparConexao();
+        await conectado.cancelConnection().catch(() => {});
+        throw e;
+      }
 
       const estado = await enviarEAguardar('PING', TEMPO_HANDSHAKE_MS);
       if (!estado) {
@@ -247,7 +318,7 @@ export function BleProvider({ children }: { children: React.ReactNode }) {
       setErro(null);
       setStatus('conectado');
     },
-    [enviarEAguardar, limparConexao, tratarMensagem]
+    [enviarEAguardar, enviarEAguardarMensagem, limparConexao, tratarMensagem]
   );
 
   const agendarReconexao = useCallback(
@@ -262,7 +333,13 @@ export function BleProvider({ children }: { children: React.ReactNode }) {
         try {
           const d = await manager.connectToDevice(id, { timeout: 8000, requestMTU: 185 });
           await prepararConexao(d, (idCaido) => agendarReconexao(idCaido, ATRASO_RECONEXAO_INICIAL_MS));
-        } catch {
+        } catch (e) {
+          // Autenticação recusada não melhora tentando de novo (e insistir renova o bloqueio da placa).
+          if (e instanceof ErroAutenticacao && e.codigo !== 'SEM_RESPOSTA') {
+            setStatus('desconectado');
+            setErro(e.message);
+            return;
+          }
           if (!desconexaoIntencional.current) {
             agendarReconexao(id, Math.min(atrasoMs * 2, ATRASO_RECONEXAO_MAX_MS));
           }
@@ -317,7 +394,7 @@ export function BleProvider({ children }: { children: React.ReactNode }) {
         .catch((err: Error) => {
           limparConexao();
           setStatus('desconectado');
-          setErro(`Falha ao conectar: ${err.message}`);
+          setErro(err instanceof ErroAutenticacao ? err.message : `Falha ao conectar: ${err.message}`);
         });
     });
   }, [manager, pararBusca, prepararConexao, aoCairConexao, limparConexao]);
@@ -329,6 +406,8 @@ export function BleProvider({ children }: { children: React.ReactNode }) {
     const d = dispositivo.current;
     if (d) await escrever('STOP').catch(() => {});
     limparConexao();
+    chaveEmUso.current = null;
+    setIdDispositivo(null);
     setNomeDispositivo(null);
     setStatus('desconectado');
     setErro(null);
@@ -365,6 +444,8 @@ export function BleProvider({ children }: { children: React.ReactNode }) {
       erro,
       erroSensor,
       nomeDispositivo,
+      idDispositivo,
+      versaoFirmware,
       estadoDispositivo,
       conectar,
       desconectar,
@@ -375,7 +456,7 @@ export function BleProvider({ children }: { children: React.ReactNode }) {
       aoReceberBruto,
       estatisticas
     }),
-    [manager, status, erro, erroSensor, nomeDispositivo, estadoDispositivo, conectar, desconectar, enviar, enviarEAguardar, aoReceberGolpe, aoReceberAmostra, aoReceberBruto, estatisticas]
+    [manager, status, erro, erroSensor, nomeDispositivo, idDispositivo, versaoFirmware, estadoDispositivo, conectar, desconectar, enviar, enviarEAguardar, aoReceberGolpe, aoReceberAmostra, aoReceberBruto, estatisticas]
   );
 
   return <BleCtx.Provider value={valor}>{children}</BleCtx.Provider>;

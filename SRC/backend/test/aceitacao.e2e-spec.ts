@@ -15,6 +15,7 @@ describe('Cenário de aceitação (§9)', () => {
   const slug = 'alternancia-e2e';
   const sessaoId = randomUUID();
   const auth = (t: string) => ({ Authorization: `Bearer ${t}` });
+  const CHAVE_RAQUETE = '5F3A9C21D04E7B18A6C2E90F3D7B5A14';
 
   async function cadastrar(email: string, faixaEtaria = 'DE_18_A_29') {
     const r = await ctx.http.post('/api/v1/auth/cadastro').send({
@@ -117,11 +118,18 @@ describe('Cenário de aceitação (§9)', () => {
     const praticantes = await ctx.http.get('/api/v1/praticantes').set(auth(tokenJogador));
     titularId = praticantes.body.find((p: { tipo: string }) => p.tipo === 'TITULAR').id;
 
+    const exemplo = await ctx.http
+      .post('/api/v1/dispositivos')
+      .set(auth(tokenJogador))
+      .send({ nomeBle: 'ArduinoR4-IMU', identificador: 'AA:BB:CC:00:11:22', firmwareVersao: '1.2.0', chave: '000102030405060708090A0B0C0D0E0F' });
+    expect(exemplo.status).toBe(422);
+
     const d = await ctx.http
       .post('/api/v1/dispositivos')
       .set(auth(tokenJogador))
-      .send({ nomeBle: 'ArduinoR4-IMU', identificador: 'AA:BB:CC:00:11:22', firmwareVersao: '1.2.0' });
+      .send({ nomeBle: 'ArduinoR4-IMU', identificador: 'AA:BB:CC:00:11:22', firmwareVersao: '1.2.0', chave: CHAVE_RAQUETE });
     expect(d.status).toBe(201);
+    expect(JSON.stringify(d.body)).not.toContain(CHAVE_RAQUETE);
     dispositivoId = d.body.id;
 
     const status = await ctx.http
@@ -129,6 +137,36 @@ describe('Cenário de aceitação (§9)', () => {
       .set(auth(tokenJogador))
       .send({ conectado: true, sensores: { imu: 'OK' }, bateriaPct: 80 });
     expect(status.status).toBe(200);
+  });
+
+  it('entrega a chave da raquete só ao dono e guarda cifrada (RNF Cibersegurança do IoT)', async () => {
+    const r = await ctx.http.get(`/api/v1/dispositivos/${dispositivoId}/chave`).set(auth(tokenJogador));
+    expect(r.status).toBe(200);
+    expect(r.body).toEqual({ chave: CHAVE_RAQUETE });
+    expect(r.headers['cache-control']).toContain('no-store');
+
+    const outro = await cadastrar('estranho.e2e@exemplo.dev');
+    expect((await ctx.http.get(`/api/v1/dispositivos/${dispositivoId}/chave`).set(auth(outro.accessToken))).status).toBe(404);
+
+    const dono = clienteDono();
+    const linha = await dono.dispositivo.findUniqueOrThrow({ where: { id: dispositivoId } });
+    await dono.$disconnect();
+    expect(linha.chaveCifrada).toBeTruthy();
+    expect(linha.chaveCifrada).not.toContain(CHAVE_RAQUETE);
+  });
+
+  it('recusa sessão em raquete sem autenticação BLE (firmware < 1.1.0)', async () => {
+    const antiga = await ctx.http
+      .post('/api/v1/dispositivos')
+      .set(auth(tokenJogador))
+      .send({ nomeBle: 'ArduinoR4-IMU', identificador: 'AA:BB:CC:00:99:99', firmwareVersao: '1.0.0', chave: CHAVE_RAQUETE });
+    expect(antiga.status).toBe(201);
+    const r = await ctx.http
+      .post('/api/v1/sessoes')
+      .set(auth(tokenJogador))
+      .send({ id: randomUUID(), praticanteId: titularId, treinoSlug: slug, dispositivoId: antiga.body.id, origem: 'SENSOR' });
+    expect(r.status).toBe(409);
+    expect(r.body.codigo).toBe('FIRMWARE_SEM_AUTENTICACAO');
   });
 
   it('executa a sessão com simulador, parada segura e sincroniza o resultado (RF06–RF10, RF19, RF22, RF23)', async () => {

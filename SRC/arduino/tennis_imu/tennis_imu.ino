@@ -10,11 +10,17 @@
  *   S:<F|B>,<picoG>,<picoGiro>,<forca 1-3>,<seq>   fim de cada golpe
  *   E:<AGUARDANDO|COLETANDO|PAUSADO|PARADO>        mudança de estado e resposta a todo comando
  *   ERR:<texto>                                    falha de sensor / comando inválido
+ *     ERR:AUTH  comando sem autenticação ou prova errada;  ERR:BLOQ  bloqueado por 30 s
+ *   CR:<Nb><PB>                                    resposta ao desafio do app (19 bytes)
+ *   V:<x.y.z>                                      versão do firmware, depois de autenticar
  *   A:ax,ay,az  e  G:gx,gy,gz                      só com DBG:1, 10 Hz (g e rad/s)
  *     (o formato antigo "A:...|G:..." passa de 20 bytes; por isso vai em duas mensagens)
  *
- * App -> Arduino: START, PAUSE, RESUME, STOP, PING, DBG:0, DBG:1
- * Os mesmos comandos funcionam no Monitor Serial (115200, nova linha).
+ * App -> Arduino: START, PAUSE, RESUME, STOP, PING, DBG:0, DBG:1, FB:1 (acerto), FB:0 (erro),
+ *                 CH:<Na> e PA:<prova> (autenticação, ver autenticacao.h)
+ * Pelo BLE, só PING, CH: e PA: são aceitos antes de autenticar. A chave fica em segredo.h.
+ * Os mesmos comandos funcionam no Monitor Serial (115200, nova linha), sem autenticação:
+ * a porta serial exige acesso físico à placa.
  *
  * Máquina de estados:
  *   AGUARDANDO --START--> COLETANDO <--PAUSE/RESUME--> PAUSADO
@@ -28,6 +34,13 @@
 #include <Adafruit_MPU6050.h>
 #include <Adafruit_Sensor.h>
 #include <ArduinoBLE.h>
+
+#if __has_include("segredo.h")
+#include "segredo.h"
+#else
+#error "Crie segredo.h a partir de segredo.exemplo.h, com uma chave aleatória de 16 bytes."
+#endif
+#include "autenticacao.h"
 
 #define SERVICE_UUID   "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
 #define CHAR_DADOS_UUID "beb5483e-36e1-4688-b7f5-ea07361b26a8"
@@ -83,6 +96,10 @@ String bufferSerial;
 String comandoBle;
 bool comandoBlePendente = false;
 
+Autenticacao autenticacao(CHAVE_DISPOSITIVO);
+uint8_t estadoAleatorio[32];
+uint32_t contadorNonce = 0;
+
 BLEService imuService(SERVICE_UUID);
 BLEStringCharacteristic dadosChar(CHAR_DADOS_UUID, BLERead | BLENotify, MAX_MSG);
 BLEStringCharacteristic cmdChar(CHAR_CMD_UUID, BLEWrite | BLEWriteWithoutResponse, MAX_MSG);
@@ -126,10 +143,73 @@ void feedbackGolpe(int forca) {
   tone(BUZZER_PIN, freq, 80);
 }
 
-void processarComando(String cmd) {
+// Retorno de acerto/erro decidido pelo app (RF08: orientar e recompensar o praticante).
+void feedbackResultado(bool acerto) {
+  if (acerto) {
+    digitalWrite(LED_PIN, HIGH);
+    ledDesligarEm = millis() + 300;
+    tone(BUZZER_PIN, 2600, 70);
+  } else {
+    digitalWrite(LED_PIN, LOW);
+    ledDesligarEm = 0;
+    tone(BUZZER_PIN, 300, 220);
+  }
+}
+
+// Desafio da placa (Nb). O RA4M1 não expõe um gerador criptográfico pela API do Arduino:
+// o estado é semeado com ruído das entradas analógicas e, a cada uso, misturado por SHA-256
+// com o tempo em µs e um contador, o que basta para o Nb não se repetir nem ser previsível.
+void semearAleatorio() {
+  uint8_t ruido[64];
+  for (int i = 0; i < 64; i++) ruido[i] = (uint8_t)(analogRead(A0 + (i % 4)) ^ (micros() >> (i % 8)));
+  cripto::sha256(ruido, sizeof(ruido), estadoAleatorio);
+}
+
+void gerarNonce(char saida[9]) {
+  uint8_t entrada[40];
+  memcpy(entrada, estadoAleatorio, 32);
+  const uint32_t agora = micros();
+  memcpy(entrada + 32, &agora, 4);
+  memcpy(entrada + 36, &contadorNonce, 4);
+  contadorNonce++;
+  cripto::sha256(entrada, sizeof(entrada), estadoAleatorio);
+  snprintf(saida, 9, "%02X%02X%02X%02X", estadoAleatorio[0], estadoAleatorio[1], estadoAleatorio[2], estadoAleatorio[3]);
+}
+
+bool chaveDeExemplo() {
+  for (uint8_t i = 0; i < 16; i++) {
+    if (CHAVE_DISPOSITIVO[i] != i) return false;
+  }
+  return true;
+}
+
+void processarComando(String cmd, bool viaBle) {
   cmd.trim();
   cmd.toUpperCase();
   if (cmd.length() == 0) return;
+
+  if (!autenticacao.comandoPermitido(cmd.c_str(), viaBle)) {
+    publicar("ERR:AUTH");
+    return;
+  }
+
+  if (cmd.startsWith("CH:")) {
+    char nb[9];
+    gerarNonce(nb);
+    const RespostaAuth r = autenticacao.desafio(cmd.c_str() + 3, nb, millis());
+    publicar(r.msg);
+    return;
+  }
+  if (cmd.startsWith("PA:")) {
+    const RespostaAuth r = autenticacao.prova(cmd.c_str() + 3, millis());
+    publicar(r.msg);
+    if (autenticacao.autenticado()) publicarEstadoPendente = true;
+    if (r.desconectar) {
+      Serial.println("Autenticacao: 3 provas erradas. Conexao derrubada e bloqueio de 30 s.");
+      BLE.disconnect();
+    }
+    return;
+  }
 
   if (cmd == "START") {
     if (!sensorOk) {
@@ -148,7 +228,10 @@ void processarComando(String cmd) {
     mudarEstado(PARADO);
   } else if (cmd == "PING") {
     publicarEstadoPendente = true;
+    if (!viaBle || autenticacao.autenticado()) publicar("V:" FIRMWARE_VERSAO);
     if (!sensorOk) publicar("ERR:MPU");
+  } else if (cmd == "FB:1" || cmd == "FB:0") {
+    feedbackResultado(cmd.endsWith("1"));
   } else if (cmd == "DBG:0" || cmd == "DBG:1") {
     debugAtivo = cmd.endsWith("1");
     publicarEstadoPendente = true;
@@ -163,11 +246,13 @@ void processarComando(String cmd) {
 void aoConectar(BLEDevice central) {
   Serial.print("Conectado ao central: ");
   Serial.println(central.address());
+  autenticacao.reiniciar();
   publicarEstadoPendente = true;
 }
 
 void aoDesconectar(BLEDevice central) {
   Serial.println("Central desconectado. Reiniciando advertising...");
+  autenticacao.reiniciar();
   desligarFeedback();
   debugAtivo = false;
   estado = AGUARDANDO;
@@ -237,7 +322,7 @@ void lerSerial() {
     const char c = Serial.read();
     if (c == '\n' || c == '\r') {
       if (bufferSerial.length() > 0) {
-        processarComando(bufferSerial);
+        processarComando(bufferSerial, false);
         bufferSerial = "";
       }
     } else if (bufferSerial.length() < MAX_MSG) {
@@ -253,6 +338,12 @@ void setup() {
   pinMode(LED_PIN, OUTPUT);
   pinMode(BUZZER_PIN, OUTPUT);
   digitalWrite(LED_PIN, LOW);
+
+  semearAleatorio();
+  Serial.println("Tennis Analytics firmware " FIRMWARE_VERSAO);
+  if (chaveDeExemplo()) {
+    Serial.println("AVISO: segredo.h usa a chave de exemplo, que e publica. Gere uma chave propria.");
+  }
 
   Wire.begin();
   Wire.setClock(400000);
@@ -297,7 +388,7 @@ void loop() {
 
   if (comandoBlePendente) {
     comandoBlePendente = false;
-    processarComando(comandoBle);
+    processarComando(comandoBle, true);
   }
 
   if (publicarEstadoPendente) {

@@ -239,6 +239,8 @@ model Dispositivo {
   firmwareVersao  String    @map("firmware_versao")
   ultimoStatus    Json?     @map("ultimo_status")
   ultimoContatoEm DateTime? @map("ultimo_contato_em")
+  /// chave do BLE (a mesma do segredo.h), cifrada com AES-256-GCM; ver comum/cifra.ts
+  chaveCifrada    String?   @map("chave_cifrada")
   bloqueado       Boolean   @default(false)
   criadoEm        DateTime  @default(now()) @map("criado_em")
 

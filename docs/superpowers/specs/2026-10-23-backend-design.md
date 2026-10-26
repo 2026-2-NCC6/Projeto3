@@ -168,7 +168,7 @@ Sessões só são criadas sobre versões `PUBLICADA` (rascunhos são testados po
 
 ### 5.6 Dispositivos (RF05, RNF Cibersegurança do IoT)
 
-INICIAR com `dispositivoId` exige: dispositivo da mesma conta, não bloqueado, `firmware_versao ≥ compatibilidade_firmware` da versão, e nenhuma sessão em `PARADA_SEGURA` nele. Violação → 403/409 + auditoria `INCIDENTE`. O app reporta status com `PUT /dispositivos/:id/status`.
+INICIAR com `dispositivoId` exige: dispositivo da mesma conta, não bloqueado, firmware ≥ 1.1.0 (primeira versão com BLE autenticado), `firmware_versao ≥ compatibilidade_firmware` da versão, e nenhuma sessão em `PARADA_SEGURA` nele. O cadastro da raquete exige a chave do BLE (32 hex, recusando a de exemplo); ela é guardada cifrada com AES-256-GCM (`CHAVE_DISPOSITIVOS`), nunca volta nas respostas (omit global do Prisma) e só é entregue ao dono em `GET /dispositivos/:id/chave`, com auditoria. Violação → 403/409 + auditoria `INCIDENTE`. O app reporta status com `PUT /dispositivos/:id/status`.
 
 ### 5.7 Autenticação (RF01, RNF Segurança)
 
@@ -260,7 +260,7 @@ OWASP Top 10: A01 guard que nega por padrão + checagem de posse; A02 TLS no dep
 
 ## 10. Limitações declaradas (§12)
 
-1. Link BLE raquete↔app sem autenticação no firmware atual (fora do backend; citar no relatório de Cibersegurança).
+1. BLE autenticado por desafio e resposta (HMAC-SHA256) desde o firmware 1.1.0; a chave de cada raquete fica cifrada na API (AES-256-GCM) e só é entregue ao dono. Residuais: as métricas de golpe trafegam legíveis (sem dado pessoal), o desafio da placa não vem de gerador criptográfico por hardware, e a porta serial não autentica (exige acesso físico).
 2. Modo offline executa sem simulador da máquina.
 3. Simulador em instância única; escalar exige mover o estado em memória para armazenamento compartilhado.
 4. App e site ainda não consomem a API.

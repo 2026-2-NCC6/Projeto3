@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { lerChaveMestra } from '../comum/cifra';
 
 function obrigatoria(nome: string): string {
   const valor = process.env[nome];
@@ -27,6 +28,8 @@ export class Configuracao {
   readonly plataformaMaeApiKey = obrigatoria('PLATAFORMA_MAE_API_KEY');
   readonly mockPlataformaMae = process.env.MOCK_PLATAFORMA_MAE === 'true';
   readonly metricsToken = obrigatoria('METRICS_TOKEN');
+  /** Cifra as chaves das raquetes guardadas no banco (AES-256-GCM). */
+  readonly chaveDispositivos = lerChaveMestra(obrigatoria('CHAVE_DISPOSITIVOS'));
   /** Mutável só para os testes E2E, que sobem o mock numa porta aleatória. */
   plataformaMaeUrl = obrigatoria('PLATAFORMA_MAE_URL');
 

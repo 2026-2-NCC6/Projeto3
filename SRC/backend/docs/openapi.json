@@ -1112,6 +1112,35 @@
         ]
       }
     },
+    "/api/v1/dispositivos/{id}/chave": {
+      "get": {
+        "operationId": "DispositivosController_chave",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Chave do BLE da raquete, só para o dono. O app usa para autenticar na raquete e não a guarda em disco.",
+        "tags": [
+          "Dispositivos"
+        ]
+      }
+    },
     "/api/v1/dispositivos/{id}/status": {
       "put": {
         "operationId": "DispositivosController_status",
@@ -2520,12 +2549,18 @@
           },
           "firmwareVersao": {
             "type": "string"
+          },
+          "chave": {
+            "type": "string",
+            "description": "Chave do BLE da raquete (32 hex, a mesma do segredo.h). Guardada cifrada; nunca volta nas respostas.",
+            "pattern": "^[0-9A-Fa-f]{32}$"
           }
         },
         "required": [
           "nomeBle",
           "identificador",
-          "firmwareVersao"
+          "firmwareVersao",
+          "chave"
         ]
       },
       "SensoresDto": {

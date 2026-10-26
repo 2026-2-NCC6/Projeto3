@@ -7,7 +7,7 @@ import { AuditoriaService } from '../auditoria/auditoria.service';
 import type { ContextoRequisicao } from '../comum/contexto';
 import { ErroApi, conflito, invalido, naoEncontrado } from '../comum/erros';
 import { versaoAtende } from '../comum/versao';
-import { DispositivosService } from '../dispositivos/dispositivos.service';
+import { DispositivosService, FIRMWARE_MINIMO_SEGURO } from '../dispositivos/dispositivos.service';
 import { OutboxService } from '../integracao/outbox.service';
 import { MaquinaService } from '../maquina/maquina.service';
 import { sequenciaEsperada } from '../maquina/plano';
@@ -365,6 +365,13 @@ export class SessoesService {
     if (d.bloqueado) {
       await incidente('DISPOSITIVO_BLOQUEADO_USADO');
       throw new ErroApi(HttpStatus.FORBIDDEN, 'DISPOSITIVO_BLOQUEADO', 'Esta raquete foi bloqueada pelo administrador.');
+    }
+    // S-16: firmware antigo não autentica o BLE e aceitaria comandos de qualquer aparelho.
+    if (!versaoAtende(d.firmwareVersao, FIRMWARE_MINIMO_SEGURO)) {
+      throw conflito(
+        'FIRMWARE_SEM_AUTENTICACAO',
+        `Atualize o firmware da raquete para ${FIRMWARE_MINIMO_SEGURO} ou superior (raquete: ${d.firmwareVersao}): versões anteriores não autenticam o Bluetooth.`
+      );
     }
     if (!versaoAtende(d.firmwareVersao, versao.compatibilidadeFirmware)) {
       throw conflito('FIRMWARE_INCOMPATIVEL', `O treino exige firmware ${versao.compatibilidadeFirmware} ou superior (raquete: ${d.firmwareVersao}).`);

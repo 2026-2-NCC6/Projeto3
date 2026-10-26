@@ -31,3 +31,6 @@ services:
         value: "true"
       - key: METRICS_TOKEN
         generateValue: true
+      # Cifra as chaves das raquetes no banco. Trocar exige recadastrar as raquetes.
+      - key: CHAVE_DISPOSITIVOS
+        generateValue: true
