@@ -41,8 +41,8 @@ npm run preview        # serve o build com a mesma CSP do deploy
 
 ## Deploy (Render)
 
-O `render.yaml` da raiz cria o site estático `tennis-analytics-site`. Depois do primeiro deploy:
+O `SRC/backend/render.yaml` cria o site estático `tennis-analytics-site`, junto com a API. Depois do primeiro deploy:
 
 1. Se o Render der à API um endereço diferente de `tennis-analytics-api.onrender.com`, ajuste
-   `VITE_API_URL` e o `connect-src` da CSP no `render.yaml`.
+   `VITE_API_URL` e o `connect-src` da CSP no `SRC/backend/render.yaml`.
 2. Inclua a URL do site em `CORS_ORIGINS` da API.

@@ -82,7 +82,7 @@ Erros seguem sempre `{ statusCode, codigo, mensagem, detalhes?, requestId }`. En
 
 ## Deploy
 
-O [Dockerfile](Dockerfile) é multiestágio, roda como usuário `node`, aplica as migrations ao subir e tem healthcheck. O [render.yaml](../../render.yaml) na raiz do repositório cria o serviço no Render:
+O [Dockerfile](Dockerfile) é multiestágio, roda como usuário `node`, aplica as migrations ao subir e tem healthcheck. O [render.yaml](render.yaml), nesta pasta, cria os serviços da API e do site no Render. Como ele não fica na raiz do repositório, informe o caminho `SRC/backend/render.yaml` no campo **Blueprint Path** ao criar o Blueprint no painel do Render:
 - Preencha `DATABASE_URL`, `DIRECT_URL`, `CORS_ORIGINS` e `PLATAFORMA_MAE_URL` no painel do Render.
 - Os demais segredos são gerados pelo próprio Render.
 

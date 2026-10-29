@@ -147,3 +147,6 @@ vite.config.ts.timestamp-*
 
 # Firmware: chave do dispositivo; versionar só o modelo segredo.exemplo.h
 segredo.h
+
+# Configuração local do Claude Code (MCP do Supabase); não vai para o repositório.
+.mcp.json
