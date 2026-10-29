@@ -1,0 +1,71 @@
+# Blueprint do Render para a API (SRC/backend). Segredos marcados com sync:false são
+# preenchidos no painel do Render, nunca neste arquivo.
+services:
+  - type: web
+    name: tennis-analytics-api
+    runtime: docker
+    rootDir: SRC/backend
+    dockerfilePath: ./Dockerfile
+    plan: free
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: TRUST_PROXY
+        value: "true"
+      - key: DATABASE_URL
+        sync: false
+      - key: DIRECT_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: CORS_ORIGINS
+        sync: false
+      # Sem a plataforma mãe real, a demonstração usa o mock embutido:
+      # https://<servico>.onrender.com/api/v1/mock/plataforma-mae
+      - key: PLATAFORMA_MAE_URL
+        sync: false
+      - key: PLATAFORMA_MAE_API_KEY
+        generateValue: true
+      - key: MOCK_PLATAFORMA_MAE
+        value: "true"
+      - key: METRICS_TOKEN
+        generateValue: true
+      # Cifra as chaves das raquetes no banco. Trocar exige recadastrar as raquetes.
+      - key: CHAVE_DISPOSITIVOS
+        generateValue: true
+
+  # Site de autoria e administração (SRC/site). Arquivos estáticos, sem servidor próprio.
+  # Depois do primeiro deploy, coloque a URL deste site em CORS_ORIGINS da API.
+  - type: web
+    name: tennis-analytics-site
+    runtime: static
+    rootDir: SRC/site
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist
+    envVars:
+      # Endereço público da API acima; ajuste se o Render der outro nome ao serviço.
+      - key: VITE_API_URL
+        value: https://tennis-analytics-api.onrender.com/api/v1
+    routes:
+      # Rotas do React Router (ex.: /treinos/cruzado-fundo) voltam para o index.html.
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    headers:
+      # Mesma política do `vite preview` (SRC/site/vite.config.ts): só o próprio site e a API.
+      - path: /*
+        name: Content-Security-Policy
+        value: "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://tennis-analytics-api.onrender.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: Referrer-Policy
+        value: no-referrer
+      - path: /*
+        name: Strict-Transport-Security
+        value: max-age=31536000; includeSubDomains
+      - path: /*
+        name: Permissions-Policy
+        value: camera=(), microphone=(), geolocation=(), payment=()

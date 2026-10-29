@@ -1,0 +1,92 @@
+name: seguranca
+
+# Verificações contínuas de segurança (RNF Segurança e Manutenibilidade):
+# segredos em todo o histórico, testes e tipos do app, e dependências vulneráveis.
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  segredos:
+    name: Busca de segredos (gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: gitleaks em todo o histórico
+        run: docker run --rm -v "$PWD:/repo" zricethezav/gitleaks:v8.21.2 detect --source /repo --redact -v
+
+  firmware:
+    name: Firmware (testes no PC e compilação para a UNO R4 WiFi)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: SRC/arduino/tennis_imu
+    steps:
+      - uses: actions/checkout@v4
+      - name: Testes da autenticação BLE no PC
+        working-directory: SRC/arduino/tennis_imu/teste_pc
+        run: g++ -std=c++17 -Wall -Wextra -Werror teste_autenticacao.cpp -o teste && ./teste
+      - uses: arduino/setup-arduino-cli@v2
+      - name: Núcleo e bibliotecas
+        run: |
+          arduino-cli core update-index
+          arduino-cli core install arduino:renesas_uno@1.6.0
+          arduino-cli lib install ArduinoBLE@2.1.0 "Adafruit MPU6050@2.2.9"
+      # A chave real nunca está no repositório: o CI compila com a chave pública de exemplo.
+      - name: Compilação
+        run: |
+          cp segredo.exemplo.h segredo.h
+          arduino-cli compile --fqbn arduino:renesas_uno:unor4wifi --warnings all .
+
+  app:
+    name: App (testes, tipos e dependências)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: SRC/app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: SRC/app/package-lock.json
+      - run: npm ci
+      - name: Testes
+        run: npm test
+      - name: Tipos
+        run: npx tsc --noEmit
+      # Expo SDK 54: de 53 vulnerabilidades (SDK 51) restam 5 altas, todas em ferramentas de build
+      # (Expo CLI e Metro), nenhuma no código que vai para o APK. node-forge não tem versão
+      # corrigida e image-size 2 quebra o Metro: ver SRC/app/README.md. Crítica bloqueia; alta avisa.
+      - name: Dependências vulneráveis (bloqueia crítica)
+        run: npm audit --audit-level=critical
+      - name: Dependências vulneráveis (relatório de altas)
+        run: npm audit --audit-level=high || echo "::warning::npm audit encontrou vulnerabilidades altas no app (residuais aceitos em SRC/app/README.md)"
+
+  site:
+    name: Site (testes, build e dependências)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: SRC/site
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: SRC/site/package-lock.json
+      - run: npm ci
+      - name: Testes
+        run: npm test
+      - name: Tipos e build
+        run: npm run build
+      # O site nasceu sem vulnerabilidades conhecidas: aqui o audit bloqueia.
+      - name: Dependências vulneráveis
+        run: npm audit --audit-level=moderate

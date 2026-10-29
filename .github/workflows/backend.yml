@@ -1,0 +1,71 @@
+name: backend
+
+on:
+  push:
+    paths: ['SRC/backend/**', '.github/workflows/backend.yml']
+  pull_request:
+    paths: ['SRC/backend/**', '.github/workflows/backend.yml']
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: SRC/backend
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: SRC/backend/package-lock.json
+      - run: npm ci
+      - run: npx prisma generate
+      - name: Tipos
+        run: npm run typecheck
+      - name: Testes unitários
+        run: npm test
+      - name: Dependências vulneráveis (A06)
+        run: npm run audit
+      - run: npm run build
+
+  imagem:
+    needs: verificar
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build da imagem Docker
+        run: docker build -t tennis-analytics-api .
+
+  # Opcional: ligue a variável de repositório E2E_HABILITADO=true e cadastre os segredos
+  # DATABASE_URL_TEST, DIRECT_URL_TEST, JWT_SECRET_TEST, ADMIN_SENHA_TEST e CHAVE_DISPOSITIVOS_TEST.
+  e2e:
+    needs: verificar
+    if: vars.E2E_HABILITADO == 'true'
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL_TEST: ${{ secrets.DATABASE_URL_TEST }}
+      DIRECT_URL_TEST: ${{ secrets.DIRECT_URL_TEST }}
+      JWT_SECRET: ${{ secrets.JWT_SECRET_TEST }}
+      ADMIN_EMAIL: admin@tennis-analytics.dev
+      ADMIN_SENHA: ${{ secrets.ADMIN_SENHA_TEST }}
+      PLATAFORMA_MAE_URL: http://127.0.0.1/placeholder
+      PLATAFORMA_MAE_API_KEY: chave-ci-somente-teste
+      METRICS_TOKEN: token-ci-somente-teste
+      CHAVE_DISPOSITIVOS: ${{ secrets.CHAVE_DISPOSITIVOS_TEST }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: SRC/backend/package-lock.json
+      - run: npm ci
+      - run: npx prisma generate
+      - name: Migrations no schema de teste
+        run: node scripts/com-env-teste.js npx prisma migrate deploy
+      - run: npm run test:e2e

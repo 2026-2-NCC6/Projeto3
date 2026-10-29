@@ -31,6 +31,11 @@ Projeto desenvolvido para otimizar o acompanhamento e a evolução de praticante
  │   └── 📄 Documento - Projeto de Extensão - COM Empresa<br>
  ├── 🗂️ Imagens/<br>
  ├── 🗂️ SRC/<br>
+ │   ├── 📁 app (aplicativo mobile — Expo/React Native, ver <a href="SRC/app/README.md">README do app</a>)<br>
+ │   ├── 📁 arduino (firmware da raquete)<br>
+ │   ├── 📁 site (autoria e administração — React/Vite, ver <a href="SRC/site/README.md">README do site</a>)<br>
+ │   └── 📁 backend (API — NestJS, ver <a href="SRC/backend/README.md">README da API</a>)<br>
+ ├── 🗂️ docs/ (especificação de design da API)<br>
  ├── 📄 .gitignore<br>
  └── 📄 readme.md<br>
  
@@ -42,7 +47,9 @@ Projeto desenvolvido para otimizar o acompanhamento e a evolução de praticante
   <li><img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/arduino/arduino-original.svg" width="18"/> <a href="https://www.arduino.cc/">Arduino (ESP32)</a></li>
   <li><img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/typescript/typescript-original.svg" width="18"/> <a href="https://www.typescriptlang.org/">TypeScript</a></li>
   <li><img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/react/react-original.svg" width="18"/> <a href="https://reactjs.org/">React / React Native</a></li>
-  <li><img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/firebase/firebase-plain.svg" width="18"/> <a href="https://firebase.google.com/">Firebase</a></li>
+  <li><img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/nestjs/nestjs-original.svg" width="18"/> <a href="https://nestjs.com/">NestJS</a> (API)</li>
+  <li><img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/postgresql/postgresql-original.svg" width="18"/> <a href="https://supabase.com/">PostgreSQL (Supabase)</a> + <a href="https://www.prisma.io/">Prisma</a></li>
+  <li><img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/docker/docker-original.svg" width="18"/> <a href="https://www.docker.com/">Docker</a></li>
   <li><img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/github/github-original.svg" width="18"/> <a href="https://github.com/">GitHub</a></li>
   <li><img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/swagger/swagger-original.svg" width="18"/> <a href="https://swagger.io/">OpenAPI / Swagger</a></li>
 </ul>

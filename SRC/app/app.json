@@ -28,7 +28,8 @@
           "neverForLocation": true,
           "bluetoothAlwaysPermission": "O Tennis Analytics usa Bluetooth para receber os dados do sensor preso na raquete."
         }
-      ]
+      ],
+      "expo-secure-store"
     ],
     "extra": {
       "eas": {

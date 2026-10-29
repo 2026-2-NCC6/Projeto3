@@ -1,6 +1,16 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { avaliarSeq, base64ParaTexto, interpretarMensagem, textoParaBase64 } from './protocolo';
+import {
+  CHAVE_EXEMPLO,
+  avaliarSeq,
+  base64ParaTexto,
+  chaveValida,
+  comandoDesafio,
+  comandoProva,
+  interpretarMensagem,
+  textoParaBase64,
+  versaoAtende
+} from './protocolo';
 
 test('golpe válido com seq', () => {
   assert.deepEqual(interpretarMensagem('S:F,6.9,18.2,2,14'), {
@@ -65,6 +75,50 @@ test('seq: duplicado e atrasado são ignorados', () => {
 test('seq: volta de 9999 para 1', () => {
   assert.deepEqual(avaliarSeq(9999, 1), { aceitar: true, lacuna: 0 });
   assert.deepEqual(avaliarSeq(9998, 2), { aceitar: true, lacuna: 2 });
+});
+
+test('resposta ao desafio (CR:) traz Nb e PB, cabe em 20 bytes e só aceita hex', () => {
+  assert.ok('CR:9F8E7D6CBF55C708'.length <= 20);
+  assert.deepEqual(interpretarMensagem('CR:9F8E7D6CBF55C708'), { tipo: 'desafio', nb: '9F8E7D6C', pb: 'BF55C708' });
+  assert.deepEqual(interpretarMensagem('CR:9f8e7d6cbf55c708'), { tipo: 'desafio', nb: '9F8E7D6C', pb: 'BF55C708' });
+  for (const m of ['CR:9F8E7D6CZF55C708', 'CR:9F8E7D6C', 'CR:9F8E7D6CBF55C70899', 'CR:']) {
+    assert.equal(interpretarMensagem(m), null, m);
+  }
+});
+
+test('versão do firmware (V:) só aceita x.y.z', () => {
+  assert.deepEqual(interpretarMensagem('V:1.1.0'), { tipo: 'versao', versao: '1.1.0' });
+  for (const m of ['V:', 'V:1.1', 'V:1.1.0;rm', 'V:a.b.c']) {
+    assert.equal(interpretarMensagem(m), null, m);
+  }
+});
+
+test('erros de autenticação da placa', () => {
+  assert.deepEqual(interpretarMensagem('ERR:AUTH'), { tipo: 'erro', texto: 'AUTH' });
+  assert.deepEqual(interpretarMensagem('ERR:BLOQ'), { tipo: 'erro', texto: 'BLOQ' });
+});
+
+test('comandos de autenticação e feedback cabem em 20 bytes e só aceitam 8 hex', () => {
+  assert.equal(comandoDesafio('1a2b3c4d'), 'CH:1A2B3C4D');
+  assert.equal(comandoProva('83e700b5'), 'PA:83E700B5');
+  for (const c of [comandoDesafio('1A2B3C4D'), comandoProva('83E700B5'), 'FB:1', 'FB:0']) assert.ok(c.length <= 20, c);
+  assert.throws(() => comandoDesafio('1A2B3C'));
+  assert.throws(() => comandoProva('ZZZZZZZZ'));
+});
+
+test('chave do dispositivo: 32 hex, recusando a de exemplo', () => {
+  assert.equal(chaveValida('00112233445566778899AABBCCDDEEFF'), true);
+  assert.equal(chaveValida('0011'), false);
+  assert.equal(chaveValida('Z0112233445566778899AABBCCDDEEFF'), false);
+  assert.equal(chaveValida(CHAVE_EXEMPLO), false);
+});
+
+test('versaoAtende compara por segmento numérico', () => {
+  assert.equal(versaoAtende('1.1.0', '1.1.0'), true);
+  assert.equal(versaoAtende('1.10.0', '1.2.0'), true);
+  assert.equal(versaoAtende('1.0.9', '1.1.0'), false);
+  assert.equal(versaoAtende('2.0', '1.9.9'), true);
+  assert.equal(versaoAtende('lixo', '1.0.0'), false);
 });
 
 test('base64 igual ao do Node', () => {

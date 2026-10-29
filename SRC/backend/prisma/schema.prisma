@@ -1,0 +1,351 @@
+// Modelo de dados do Tennis Analytics — seção 4 da spec (docs/superpowers/specs/2026-10-23-backend-design.md).
+// Schema Postgres dedicado (`tennis`), informado por ?schema= nas URLs.
+// DATABASE_URL usa o papel `tennis_api` (só DML); DIRECT_URL usa o dono do schema e serve às migrations.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Papel {
+  JOGADOR
+  AUTOR
+  ADMIN
+}
+
+enum TipoPraticante {
+  TITULAR
+  DEPENDENTE
+}
+
+enum FaixaEtaria {
+  ATE_9
+  DE_10_A_13
+  DE_14_A_17
+  DE_18_A_29
+  DE_30_A_44
+  DE_45_A_59
+  DE_60_MAIS
+}
+
+enum Nivel {
+  INICIANTE
+  INTERMEDIARIO
+  AVANCADO
+}
+
+enum ModoPublico {
+  INFANTIL
+  ADULTO
+  TODOS
+}
+
+enum StatusVersao {
+  RASCUNHO
+  EM_REVISAO
+  PUBLICADA
+  ARQUIVADA
+}
+
+enum OrigemTreino {
+  LOCAL
+  PLATAFORMA_MAE
+}
+
+enum Licenca {
+  CC_BY
+  PROPRIETARIA
+  USO_PESSOAL
+}
+
+enum ModeloRemuneracao {
+  GRATUITO
+  AVULSO
+  ASSINATURA
+}
+
+enum OrigemSessao {
+  SENSOR
+  DEMO
+}
+
+enum EstadoSessao {
+  CRIADA
+  EM_EXECUCAO
+  PAUSADA
+  ENCERRADA
+  PARADA_SEGURA
+}
+
+enum TipoEvento {
+  GOLPE
+  LANCAMENTO
+  COMANDO
+  ESTADO
+  ERRO
+}
+
+enum TipoEnvio {
+  RESUMO
+  EVENTOS
+}
+
+enum StatusEnvio {
+  PENDENTE
+  ENVIADO
+  FALHOU
+}
+
+enum Severidade {
+  INFO
+  INCIDENTE
+}
+
+model Usuario {
+  id                String    @id @default(uuid()) @db.Uuid
+  email             String    @unique
+  senhaHash         String    @map("senha_hash")
+  nome              String
+  papel             Papel     @default(JOGADOR)
+  ativo             Boolean   @default(true)
+  declaraMaioridade Boolean   @map("declara_maioridade")
+  termosVersao      String    @map("termos_versao")
+  termosAceitosEm   DateTime  @map("termos_aceitos_em")
+  criadoEm          DateTime  @default(now()) @map("criado_em")
+  anonimizadoEm     DateTime? @map("anonimizado_em")
+
+  refreshTokens RefreshToken[]
+  praticantes   Praticante[]
+  treinos       Treino[]
+  dispositivos  Dispositivo[]
+  auditoria     Auditoria[]
+
+  @@map("usuario")
+}
+
+model RefreshToken {
+  id               String    @id @default(uuid()) @db.Uuid
+  usuarioId        String    @map("usuario_id") @db.Uuid
+  familiaId        String    @map("familia_id") @db.Uuid
+  tokenHash        String    @unique @map("token_hash")
+  expiraEm         DateTime  @map("expira_em")
+  revogadoEm       DateTime? @map("revogado_em")
+  substituidoPorId String?   @map("substituido_por_id") @db.Uuid
+  criadoEm         DateTime  @default(now()) @map("criado_em")
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([familiaId])
+  @@map("refresh_token")
+}
+
+model Praticante {
+  id                      String         @id @default(uuid()) @db.Uuid
+  contaId                 String         @map("conta_id") @db.Uuid
+  tipo                    TipoPraticante
+  apelido                 String
+  faixaEtaria             FaixaEtaria    @map("faixa_etaria")
+  nivel                   Nivel          @default(INICIANTE)
+  objetivos               String[]       @default([])
+  preferencias            Json           @default("{}")
+  restricoes              String?
+  consenteTelemetria      Boolean        @default(false) @map("consente_telemetria")
+  consentimentoParentalEm DateTime?      @map("consentimento_parental_em")
+  criadoEm                DateTime       @default(now()) @map("criado_em")
+
+  conta   Usuario  @relation(fields: [contaId], references: [id], onDelete: Cascade)
+  sessoes Sessao[]
+
+  @@index([contaId])
+  @@map("praticante")
+}
+
+model Categoria {
+  id      String   @id @default(uuid()) @db.Uuid
+  nome    String
+  slug    String   @unique
+  treinos Treino[]
+
+  @@map("categoria")
+}
+
+model Treino {
+  id          String       @id @default(uuid()) @db.Uuid
+  slug        String       @unique
+  nome        String
+  autorId     String       @map("autor_id") @db.Uuid
+  categoriaId String?      @map("categoria_id") @db.Uuid
+  origem      OrigemTreino @default(LOCAL)
+  idExterno   String?      @unique @map("id_externo")
+  criadoEm    DateTime     @default(now()) @map("criado_em")
+
+  autor       Usuario               @relation(fields: [autorId], references: [id])
+  categoria   Categoria?            @relation(fields: [categoriaId], references: [id], onDelete: SetNull)
+  versoes     TreinoVersao[]
+  marketplace MarketplaceMetadados?
+
+  @@map("treino")
+}
+
+model TreinoVersao {
+  id                      String       @id @default(uuid()) @db.Uuid
+  treinoId                String       @map("treino_id") @db.Uuid
+  numero                  Int
+  status                  StatusVersao @default(RASCUNHO)
+  conteudo                Json
+  publicoAlvo             String       @map("publico_alvo")
+  objetivo                String
+  nivel                   Nivel
+  duracaoMin              Int          @map("duracao_min")
+  sensores                String[]
+  modoPublico             ModoPublico  @map("modo_publico")
+  compatibilidadeFirmware String       @default("1.0.0") @map("compatibilidade_firmware")
+  notasAlteracao          String?      @map("notas_alteracao")
+  criadoPorId             String       @map("criado_por_id") @db.Uuid
+  criadoEm                DateTime     @default(now()) @map("criado_em")
+  publicadoEm             DateTime?    @map("publicado_em")
+
+  treino  Treino   @relation(fields: [treinoId], references: [id], onDelete: Cascade)
+  sessoes Sessao[]
+
+  @@unique([treinoId, numero])
+  @@index([status, nivel, modoPublico])
+  @@map("treino_versao")
+}
+
+model MarketplaceMetadados {
+  treinoId            String            @id @map("treino_id") @db.Uuid
+  descricaoComercial  String            @map("descricao_comercial")
+  licenca             Licenca           @default(USO_PESSOAL)
+  modeloRemuneracao   ModeloRemuneracao @default(GRATUITO) @map("modelo_remuneracao")
+  precoFuturoCentavos Int?              @map("preco_futuro_centavos")
+  atualizadoEm        DateTime          @updatedAt @map("atualizado_em")
+
+  treino Treino @relation(fields: [treinoId], references: [id], onDelete: Cascade)
+
+  @@map("marketplace_metadados")
+}
+
+model Dispositivo {
+  id              String    @id @default(uuid()) @db.Uuid
+  contaId         String    @map("conta_id") @db.Uuid
+  nomeBle         String    @map("nome_ble")
+  identificador   String    @unique
+  firmwareVersao  String    @map("firmware_versao")
+  ultimoStatus    Json?     @map("ultimo_status")
+  ultimoContatoEm DateTime? @map("ultimo_contato_em")
+  /// chave do BLE (a mesma do segredo.h), cifrada com AES-256-GCM; ver comum/cifra.ts
+  chaveCifrada    String?   @map("chave_cifrada")
+  bloqueado       Boolean   @default(false)
+  criadoEm        DateTime  @default(now()) @map("criado_em")
+
+  conta   Usuario  @relation(fields: [contaId], references: [id], onDelete: Cascade)
+  sessoes Sessao[]
+
+  @@map("dispositivo")
+}
+
+model Sessao {
+  id                String       @id @db.Uuid
+  praticanteId      String       @map("praticante_id") @db.Uuid
+  treinoVersaoId    String       @map("treino_versao_id") @db.Uuid
+  dispositivoId     String?      @map("dispositivo_id") @db.Uuid
+  origem            OrigemSessao
+  estado            EstadoSessao @default(CRIADA)
+  iniciadaEm        DateTime?    @map("iniciada_em")
+  encerradaEm       DateTime?    @map("encerrada_em")
+  motivoInterrupcao String?      @map("motivo_interrupcao")
+  duracaoSeg        Int?         @map("duracao_seg")
+  lancamentos       Int          @default(0)
+  resumo            Json?
+  pontos            Int?
+  golpes            Int?
+  acertos           Int?
+  divergencia       Boolean      @default(false)
+  offline           Boolean      @default(false)
+  criadoEm          DateTime     @default(now()) @map("criado_em")
+
+  praticante  Praticante        @relation(fields: [praticanteId], references: [id], onDelete: Cascade)
+  versao      TreinoVersao      @relation(fields: [treinoVersaoId], references: [id])
+  dispositivo Dispositivo?      @relation(fields: [dispositivoId], references: [id], onDelete: SetNull)
+  eventos     EventoSessao[]
+  envios      EnvioPlataforma[]
+
+  @@index([praticanteId, criadoEm])
+  @@index([dispositivoId, estado])
+  @@map("sessao")
+}
+
+model EventoSessao {
+  id         String     @id @db.Uuid
+  sessaoId   String     @map("sessao_id") @db.Uuid
+  tipo       TipoEvento
+  tMs        Int        @map("t_ms")
+  ocorridoEm DateTime   @map("ocorrido_em")
+  dados      Json       @default("{}")
+
+  sessao Sessao @relation(fields: [sessaoId], references: [id], onDelete: Cascade)
+
+  @@index([sessaoId, tMs])
+  @@map("evento_sessao")
+}
+
+model EnvioPlataforma {
+  id                 String      @id @default(uuid()) @db.Uuid
+  sessaoId           String      @map("sessao_id") @db.Uuid
+  tipo               TipoEnvio
+  payload            Json
+  idempotencyKey     String      @unique @map("idempotency_key")
+  status             StatusEnvio @default(PENDENTE)
+  tentativas         Int         @default(0)
+  proximaTentativaEm DateTime    @default(now()) @map("proxima_tentativa_em")
+  ultimoErro         String?     @map("ultimo_erro")
+  criadoEm           DateTime    @default(now()) @map("criado_em")
+  enviadoEm          DateTime?   @map("enviado_em")
+
+  sessao Sessao @relation(fields: [sessaoId], references: [id], onDelete: Cascade)
+
+  @@index([status, proximaTentativaEm])
+  @@map("envio_plataforma")
+}
+
+model Auditoria {
+  id         BigInt     @id @default(autoincrement())
+  ocorridoEm DateTime   @default(now()) @map("ocorrido_em")
+  usuarioId  String?    @map("usuario_id") @db.Uuid
+  acao       String
+  alvoTipo   String?    @map("alvo_tipo")
+  alvoId     String?    @map("alvo_id")
+  ip         String?
+  requestId  String?    @map("request_id")
+  severidade Severidade @default(INFO)
+  detalhes   Json       @default("{}")
+
+  usuario Usuario? @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+
+  @@index([ocorridoEm])
+  @@index([acao])
+  @@map("auditoria")
+}
+
+model ParametroSistema {
+  chave        String   @id
+  valor        Json
+  atualizadoEm DateTime @updatedAt @map("atualizado_em")
+
+  @@map("parametro_sistema")
+}
+
+// Recebido pelo mock da plataforma mãe (embutido só para demonstração; ver integracao/).
+model MockPlataformaResultado {
+  idempotencyKey String   @id @map("idempotency_key")
+  payload        Json
+  recebidoEm     DateTime @default(now()) @map("recebido_em")
+
+  @@map("mock_plataforma_resultado")
+}

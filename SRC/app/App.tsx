@@ -9,6 +9,13 @@ import { colors } from './src/theme/colors';
 import { useAppFonts } from './src/theme/useAppFonts';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { BleProvider } from './src/ble/BleContext';
+import { AuthProvider, useAuth } from './src/auth/AuthContext';
+
+/** A chave do BLE de cada raquete vem da conta (API ou cofre do aparelho), nunca do pacote do app. */
+function BleComChaveDaConta({ children }: { children: React.ReactNode }) {
+  const { obterChaveRaquete } = useAuth();
+  return <BleProvider obterChave={obterChaveRaquete}>{children}</BleProvider>;
+}
 
 const navTheme: Theme = {
   ...DarkTheme,
@@ -41,12 +48,14 @@ export default function App() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <BleProvider>
-          <StatusBar style="light" />
-          <NavigationContainer theme={navTheme}>
-            <RootNavigator />
-          </NavigationContainer>
-        </BleProvider>
+        <AuthProvider>
+          <BleComChaveDaConta>
+            <StatusBar style="light" />
+            <NavigationContainer theme={navTheme}>
+              <RootNavigator />
+            </NavigationContainer>
+          </BleComChaveDaConta>
+        </AuthProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

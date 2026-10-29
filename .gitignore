@@ -141,3 +141,9 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
+
+# Expo: dados locais da máquina de desenvolvimento (identificador do aparelho)
+.expo/
+
+# Firmware: chave do dispositivo; versionar só o modelo segredo.exemplo.h
+segredo.h
