@@ -1,6 +1,6 @@
 import { ESTADOS, EstadoSessao, GATILHOS, Gatilho, transicao } from './estado';
 
-// Tabela 5.2 da spec (docs/superpowers/specs/2026-10-23-backend-design.md).
+// Transições da máquina de estados da sessão (RF06, RF22).
 const VALIDAS: [EstadoSessao, Gatilho, EstadoSessao][] = [
   ['CRIADA', 'INICIAR', 'EM_EXECUCAO'],
   ['EM_EXECUCAO', 'PAUSAR', 'PAUSADA'],

@@ -2,7 +2,6 @@
 
 Backend do Smart Tennis Arena (Projeto Interdisciplinar, 6º CCOMP FECAP 2026). Ele atende o lado servidor de RF01–RF23 do edital: autenticação, catálogo e versionamento de treinos, sessões com máquina de estados, simulador da máquina lançadora, pontuação gamificada, histórico, integração com a plataforma mãe, administração e auditoria.
 
-- **Design e rastreabilidade de requisitos:** [docs/superpowers/specs/2026-10-23-backend-design.md](../../docs/superpowers/specs/2026-10-23-backend-design.md)
 - **Contrato da API:** Swagger em `/api/v1/docs` e [docs/openapi.json](docs/openapi.json)
 
 ## Stack

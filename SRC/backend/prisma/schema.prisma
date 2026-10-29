@@ -1,4 +1,4 @@
-// Modelo de dados do Tennis Analytics — seção 4 da spec (docs/superpowers/specs/2026-10-23-backend-design.md).
+// Modelo de dados do Tennis Analytics.
 // Schema Postgres dedicado (`tennis`), informado por ?schema= nas URLs.
 // DATABASE_URL usa o papel `tennis_api` (só DML); DIRECT_URL usa o dono do schema e serve às migrations.
 
