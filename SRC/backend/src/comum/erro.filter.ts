@@ -14,6 +14,12 @@ const CODIGO_POR_STATUS: Record<number, string> = {
   429: 'MUITAS_REQUISICOES'
 };
 
+/** Erro 4xx do pacote http-errors (usado pelo body-parser): `expose` indica que é seguro mostrar. */
+function ehErroDoCliente(erro: unknown): erro is Error & { status: number } {
+  const e = erro as { status?: unknown; expose?: unknown };
+  return erro instanceof Error && typeof e.status === 'number' && e.status >= 400 && e.status < 500 && e.expose === true;
+}
+
 /**
  * Formato único de erro: { statusCode, codigo, mensagem, detalhes?, requestId }.
  * Erros inesperados nunca expõem stack trace nem mensagem interna (A05).
@@ -45,6 +51,14 @@ export class ErroFilter implements ExceptionFilter {
         const msg = typeof r === 'string' ? r : (r as { message?: string | string[] }).message;
         corpo = { codigo: CODIGO_POR_STATUS[status] ?? 'ERRO', mensagem: Array.isArray(msg) ? msg.join('; ') : (msg ?? erro.message) };
       }
+    } else if (ehErroDoCliente(erro)) {
+      // Erros do body-parser do Express (corpo grande demais, codificação inválida) chegam aqui
+      // sem passar pelo Nest; tratados como genéricos, virariam 500 e poluiriam o log.
+      status = erro.status;
+      corpo =
+        status === HttpStatus.PAYLOAD_TOO_LARGE
+          ? { codigo: 'CORPO_GRANDE_DEMAIS', mensagem: 'O corpo da requisição passa do limite de 100 KB.' }
+          : { codigo: CODIGO_POR_STATUS[status] ?? 'REQUISICAO_INVALIDA', mensagem: 'Requisição inválida.' };
     } else if (erro instanceof Prisma.PrismaClientKnownRequestError && erro.code === 'P2002') {
       status = HttpStatus.CONFLICT;
       corpo = { codigo: 'CONFLITO', mensagem: 'Registro já existe.' };

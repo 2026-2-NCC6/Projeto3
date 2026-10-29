@@ -43,7 +43,7 @@ Pré-requisito: Node 22+.
 
 ```bash
 npm test            # unitários: pontuação, máquina de estados, simulador, validação, firmware
-npm run test:e2e    # cenário de aceitação da §9, contra o schema tennis_test
+npm run test:e2e    # cenário de aceitação da §9 e testes de segurança (ataques barrados), contra o schema tennis_test
 ```
 
 Antes do primeiro E2E, aplique as migrations no schema de teste com `node scripts/com-env-teste.js npx prisma migrate deploy`. O E2E apaga e repopula `tennis_test` a cada execução e nunca toca o schema `tennis`.

@@ -4,6 +4,8 @@ import { lerChaveMestra } from '../comum/cifra';
 function obrigatoria(nome: string): string {
   const valor = process.env[nome];
   if (!valor) throw new Error(`Variável de ambiente ${nome} não definida (ver .env.example).`);
+  // Os modelos do .env.example vêm entre < >; copiá-los sem trocar deixaria um segredo público.
+  if (/^<.*>$/.test(valor.trim())) throw new Error(`Variável de ambiente ${nome} ainda tem o valor de exemplo do .env.example.`);
   return valor;
 }
 
