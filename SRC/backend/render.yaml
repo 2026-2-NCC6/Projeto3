@@ -46,7 +46,7 @@ services:
     envVars:
       # Endereço público da API acima; ajuste se o Render der outro nome ao serviço.
       - key: VITE_API_URL
-        value: https://tennis-analytics-api.onrender.com/api/v1
+        value: https://tennis-analytics-api-nel7.onrender.com/api/v1
     routes:
       # Rotas do React Router (ex.: /treinos/cruzado-fundo) voltam para o index.html.
       - type: rewrite
@@ -56,7 +56,7 @@ services:
       # Mesma política do `vite preview` (SRC/site/vite.config.ts): só o próprio site e a API.
       - path: /*
         name: Content-Security-Policy
-        value: "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://tennis-analytics-api.onrender.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+        value: "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://tennis-analytics-api-nel7.onrender.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
       - path: /*
         name: X-Content-Type-Options
         value: nosniff
