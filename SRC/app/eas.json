@@ -9,7 +9,11 @@
       "distribution": "internal"
     },
     "preview": {
-      "distribution": "internal"
+      "distribution": "internal",
+      "android": { "buildType": "apk" },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://tennis-analytics-api-nel7.onrender.com/api/v1"
+      }
     },
     "production": {
       "autoIncrement": true
