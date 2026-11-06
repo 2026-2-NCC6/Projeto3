@@ -1,0 +1,26 @@
+name: manter-api-acordada
+
+# O plano free do Render suspende a API após ~15 min sem tráfego, e a primeira chamada
+# depois disso leva 30-60 s. O app desiste em 60 s e o usuário vê "Sem conexão com o
+# servidor". Este ping periódico mantém o serviço de pé.
+on:
+  schedule:
+    # A cada 10 min. O GitHub atrasa agendamentos em horário de pico, mas o intervalo
+    # efetivo fica bem abaixo dos 15 min de ociosidade que suspendem o serviço.
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pingar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Chamar /health da API
+        run: |
+          codigo=$(curl -s -o /tmp/resposta -w '%{http_code}' --max-time 90 \
+            https://tennis-analytics-api-nel7.onrender.com/api/v1/health)
+          echo "HTTP $codigo"
+          cat /tmp/resposta
+          test "$codigo" = "200"

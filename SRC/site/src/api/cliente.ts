@@ -34,7 +34,9 @@ export type Resposta<T> = { status: number; dados: T; cabecalhos: Headers };
 
 export function criarCliente(op: OpcoesCliente) {
   const fazerFetch = op.fetch ?? fetch;
-  const timeoutMs = op.timeoutMs ?? 15_000;
+  // 60 s porque o plano free do Render suspende a API após ~15 min parada, e a primeira
+  // chamada depois disso espera o contêiner subir (ver SRC/app/src/api/cliente.ts).
+  const timeoutMs = op.timeoutMs ?? 60_000;
   let renovando: Promise<boolean> | null = null;
 
   async function chamar(metodo: string, caminho: string, o: OpcoesRequisicao, token: string | null): Promise<Response> {
