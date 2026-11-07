@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { timingSafeEqual } from 'node:crypto';
 import { AuditoriaService } from '../auditoria/auditoria.service';
 import type { ContextoRequisicao } from '../comum/contexto';
 import { Cifra } from '../comum/cifra';
@@ -29,21 +30,66 @@ export class DispositivosService {
     return this.prisma.dispositivo.findMany({ where: { contaId }, orderBy: { criadoEm: 'asc' } });
   }
 
+  /**
+   * A chave apresentada é a mesma guardada para esta raquete? Serve como prova de posse física na
+   * transferência de vínculo. Compara em tempo constante para não vazar o prefixo correto, e trata
+   * um registro ilegível (chave ausente ou adulterada no banco) como "não confere".
+   */
+  private chaveConfere(chaveCifrada: string | null, apresentada: string) {
+    if (!chaveCifrada) return false;
+    let guardada: string;
+    try {
+      guardada = this.cifra.decifrar(chaveCifrada);
+    } catch {
+      return false;
+    }
+    const a = Buffer.from(guardada, 'utf8');
+    const b = Buffer.from(apresentada.toUpperCase(), 'utf8');
+    return a.length === b.length && timingSafeEqual(a, b);
+  }
+
   async registrar(dto: RegistrarDispositivoDto, ctx: ContextoRequisicao) {
     const { chave, ...dados } = dto;
     if (chave.toUpperCase() === CHAVE_EXEMPLO) {
       throw invalido('CHAVE_DE_EXEMPLO', 'Esta é a chave pública de exemplo. Grave uma chave própria na raquete (segredo.h).');
     }
     const chaveCifrada = this.cifra.cifrar(chave.toUpperCase());
-    const existente = await this.prisma.dispositivo.findUnique({ where: { identificador: dto.identificador } });
+    // `omit: { chaveCifrada: false }` porque a transferência de posse precisa comparar a chave
+    // guardada com a apresentada; por padrão essa coluna não sai do banco (ver PrismaService).
+    const existente = await this.prisma.dispositivo.findUnique({
+      where: { identificador: dto.identificador },
+      omit: { chaveCifrada: false }
+    });
     if (existente && existente.contaId !== ctx.usuario.id) {
-      await this.auditoria.registrar(ctx, {
-        acao: 'DISPOSITIVO_DE_OUTRA_CONTA',
-        alvoTipo: 'dispositivo',
-        alvoId: existente.id,
-        severidade: 'INCIDENTE'
+      // Uma raquete não pertence a uma conta para sempre: ela é um objeto físico que troca de mão
+      // (outro aluno, outro celular, outro perfil). Quem apresenta a chave correta provou posse
+      // física dela — o app só consegue a chave depois de autenticar na própria placa por HMAC.
+      // Então a chave é o título de posse, e o vínculo é transferido em vez de recusado.
+      if (!this.chaveConfere(existente.chaveCifrada, chave)) {
+        await this.auditoria.registrar(ctx, {
+          acao: 'DISPOSITIVO_DE_OUTRA_CONTA',
+          alvoTipo: 'dispositivo',
+          alvoId: existente.id,
+          severidade: 'INCIDENTE'
+        });
+        throw conflito(
+          'DISPOSITIVO_JA_VINCULADO',
+          'Esta raquete está vinculada a outra conta e a chave informada não é a dela. Confira a chave gravada em segredo.h.'
+        );
+      }
+      const d = await this.prisma.dispositivo.update({
+        where: { id: existente.id },
+        data: { ...dados, chaveCifrada, contaId: ctx.usuario.id }
       });
-      throw conflito('DISPOSITIVO_JA_VINCULADO', 'Esta raquete já está vinculada a outra conta.');
+      // Transferência de posse é um evento sensível: fica registrado para os dois lados, com as
+      // contas envolvidas, mesmo sendo uma operação legítima.
+      await this.auditoria.registrar(ctx, {
+        acao: 'DISPOSITIVO_TRANSFERIDO',
+        alvoTipo: 'dispositivo',
+        alvoId: d.id,
+        detalhes: { deConta: existente.contaId, paraConta: ctx.usuario.id }
+      });
+      return d;
     }
     if (existente) {
       // Mesmo dono registrando de novo: a raquete pode ter sido regravada com outra chave.

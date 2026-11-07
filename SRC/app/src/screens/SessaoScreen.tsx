@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Modal, Pressable, StyleSheet, Text, Vibration, View } from 'react-native';
+import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, Vibration, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -327,7 +327,8 @@ export function SessaoScreen({ navigation, route }: Props) {
   const precisao = resumo.golpes ? Math.round((resumo.acertos / resumo.golpes) * 100) : null;
   const resistOk = resumo.indiceResistencia >= 70;
   const ultimo = golpes[golpes.length - 1];
-  const recentes = golpes.slice(-4).reverse();
+  // 8 em vez de 4: agora que a seção rola, cabe mais histórico sem empurrar nada para fora.
+  const recentes = golpes.slice(-8).reverse();
   const rotuloPausa = pendente === 'pausar' ? 'Pausando…' : pendente === 'retomar' ? 'Retomando…' : fase === 'pausado' ? 'Retomar' : 'Pausar';
   const estrelas = t.recompensa(resumo.acertos);
 
@@ -359,11 +360,19 @@ export function SessaoScreen({ navigation, route }: Props) {
         </View>
       </View>
 
-      {modo === 'offline' && (
-        <View style={{ marginHorizontal: 20, marginTop: 10 }}>
-          <Aviso texto="Sem conexão: a sessão continua e será enviada quando a internet voltar. A máquina simulada só funciona online." />
-        </View>
-      )}
+      {/* O miolo rola: numa tela de celular o placar, os dois banners e o histórico não cabem
+          juntos, e sem rolagem as linhas de golpe transbordavam por cima dos botões. Os controles
+          ficam fora da rolagem, fixos no rodapé, porque a parada segura tem de estar sempre à mão. */}
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollConteudo}
+        showsVerticalScrollIndicator={false}
+      >
+        {modo === 'offline' && (
+          <View style={{ marginHorizontal: 20, marginTop: 10 }}>
+            <Aviso texto="Sem conexão: a sessão continua e será enviada quando a internet voltar. A máquina simulada só funciona online." />
+          </View>
+        )}
 
       <View style={styles.heroRow}>
         <View>
@@ -440,8 +449,12 @@ export function SessaoScreen({ navigation, route }: Props) {
         {recentes.map((g, i) => (
           <View key={`${g.t}-${golpes.length - i}`} style={styles.feedRow}>
             <View style={[styles.feedDot, { backgroundColor: g.ok ? colors.success : colors.danger }]} />
-            <Text style={styles.feedTipo}>{g.lado}</Text>
-            <Text style={styles.feedZona}>{g.ok ? 'como pedido' : `pedia ${g.esperado === 'Forehand' ? 'FH' : 'BH'}`}</Text>
+            <Text style={styles.feedTipo} numberOfLines={1}>
+              {g.lado}
+            </Text>
+            <Text style={styles.feedZona} numberOfLines={1}>
+              {g.ok ? 'como pedido' : `pedia ${g.esperado === 'Forehand' ? 'FH' : 'BH'}`}
+            </Text>
             <View style={styles.feedBars}>
               <View style={[styles.feedBar, { height: 5, backgroundColor: colors.primary }]} />
               <View style={[styles.feedBar, { height: 9, backgroundColor: g.forca >= 2 ? colors.primary : colors.borderStrong }]} />
@@ -451,7 +464,9 @@ export function SessaoScreen({ navigation, route }: Props) {
           </View>
         ))}
       </View>
+      </ScrollView>
 
+      <View style={styles.rodape}>
       {erroCmd && !sheetAberto && (
         <View style={styles.erroRow}>
           <Text style={styles.erroTexto}>{erroCmd}</Text>
@@ -489,6 +504,7 @@ export function SessaoScreen({ navigation, route }: Props) {
           </Pressable>
         </View>
       )}
+      </View>
 
       <Modal visible={sheetAberto} transparent animationType="slide" onRequestClose={() => setSheetAberto(false)}>
         <View style={styles.modalBackdrop}>
@@ -534,6 +550,11 @@ export function SessaoScreen({ navigation, route }: Props) {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   header: { paddingHorizontal: 20, paddingTop: 6 },
+  scroll: { flex: 1 },
+  // A folga no fim evita que a última linha de golpe encoste na borda do rodapé fixo.
+  scrollConteudo: { paddingBottom: 14 },
+  // Rodapé fixo: erro, Pausar/Encerrar, parada segura e a faixa do sensor nunca saem da tela.
+  rodape: { borderTopWidth: 1, borderTopColor: colors.divider, backgroundColor: colors.surfaceSunken, paddingTop: 4 },
   liveRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   statusLeft: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   liveDot: { width: 7, height: 7, borderRadius: 3.5 },
@@ -562,12 +583,14 @@ const styles = StyleSheet.create({
   bannerDetail: { fontFamily: fonts.body, fontSize: 11.5, color: colors.textTertiary, marginTop: 3 },
   resistLabel: { fontFamily: fonts.bodyMedium, fontSize: 10, letterSpacing: 1.2, textTransform: 'uppercase', color: colors.textSecondary },
   resistValue: { fontFamily: fonts.displayBold, fontSize: 24 },
-  feedSection: { flex: 1, paddingHorizontal: 20, paddingTop: 12 },
+  // Sem `flex: 1`: dentro da rolagem a seção tem a altura do seu conteúdo. Com flex,
+  // ela era comprimida a quase nada e as linhas de golpe vazavam sobre os botões.
+  feedSection: { paddingHorizontal: 20, paddingTop: 12 },
   feedVazio: { fontFamily: fonts.body, fontSize: 12.5, color: colors.textTertiary, paddingVertical: 12 },
   feedRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 9, borderBottomWidth: 1, borderBottomColor: colors.divider },
   feedDot: { width: 7, height: 7, borderRadius: 3.5 },
-  feedTipo: { flex: 1, fontFamily: fonts.body, fontSize: 13.5, color: colors.text },
-  feedZona: { fontFamily: fonts.body, fontSize: 12, color: colors.textSecondary },
+  feedTipo: { flexShrink: 1, fontFamily: fonts.body, fontSize: 13.5, color: colors.text },
+  feedZona: { flex: 1, fontFamily: fonts.body, fontSize: 12, color: colors.textSecondary, textAlign: 'right' },
   feedBars: { flexDirection: 'row', alignItems: 'flex-end', gap: 2.5, height: 13 },
   feedBar: { width: 3.5, borderRadius: 1 },
   feedTempo: { fontFamily: fonts.mono, fontSize: 11.5, color: colors.textQuaternary, width: 38, textAlign: 'right' },
